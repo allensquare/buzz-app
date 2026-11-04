@@ -44,7 +44,11 @@ import creationStyles from "./SoloInventory.module.css";
 import { PlusIcon, ChatCircleIcon } from "../../shared/design-system/icons";
 import { NavigationItem } from "../../shared/design-system/ui/NavigationItem";
 import type { ContributionReader } from "../conversation/contracts";
-import type { ChatIcon, ChatMenu } from "../conversation/service";
+import type {
+  ChatArrangement,
+  ChatIcon,
+  ChatMenu,
+} from "../conversation/service";
 import channelStyles from "../../bundled/channels/Channels.module.css";
 import styles from "../../bundled/channels/SoloWorkspaces.module.css";
 
@@ -63,6 +67,7 @@ export function SoloInventory({
   target,
   chatIcons,
   chatMenus,
+  chatArrangements,
   renderContents,
 }: {
   session: RelaySession;
@@ -72,6 +77,7 @@ export function SoloInventory({
   /** Plugin icons that can stand in for a chat's own. */
   chatIcons?: ContributionReader<ChatIcon> | undefined;
   chatMenus?: ContributionReader<ChatMenu> | undefined;
+  chatArrangements?: ContributionReader<ChatArrangement> | undefined;
   renderContents?: (
     content: ReactNode,
     actions: ReactNode,
@@ -117,6 +123,10 @@ export function SoloInventory({
   const menus = useSyncExternalStore(
     chatMenus?.subscribe ?? noSubscription,
     () => chatMenus?.snapshot(),
+  );
+  const arrange = useSyncExternalStore(
+    chatArrangements?.subscribe ?? noSubscription,
+    () => chatArrangements?.snapshot()[0]?.arrange,
   );
   const workingChannels = new Set<string>(JSON.parse(workingIds));
   const open = (channelId: string) =>
@@ -290,9 +300,14 @@ export function SoloInventory({
               ?.focus({ preventScroll: true });
           });
         }}
+        arrange={arrange}
         chats={conversations.map((item) => ({
           id: item.id,
           title: item.name,
+          unread: unreadChats.has(item.id),
+          working: workingChannels.has(item.id),
+          selected: selected === item.id,
+          lastActivityAt: item.lastActivityAt ?? item.updatedAt,
           pinned:
             selected === item.id ||
             workingChannels.has(item.id) ||

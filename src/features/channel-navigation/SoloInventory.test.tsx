@@ -13,7 +13,7 @@ import { stubAvatarBrowserApis } from "../agents/avatar-testing";
 import { writeView } from "../../shared/view-state";
 import { conversationTarget, soloDraftTarget } from "./routes";
 import type { Contribution } from "../../plugins/contributions";
-import type { ChatIcon, ChatMenu } from "../conversation/service";
+import type { ChatArrange, ChatIcon, ChatMenu } from "../conversation/service";
 
 import {
   fixture,
@@ -338,4 +338,123 @@ it("shows plugin actions in the primary sidebar right-click menu", async () => {
   expect(
     await screen.findByRole("menuitem", { name: "Unlink pull request" }),
   ).toBeVisible();
+});
+
+const arranging = (arrange: ChatArrange) => ({
+  chatArrangements: {
+    snapshot: () => [
+      {
+        id: "chat-arrangement",
+        key: "test/chat-arrangement",
+        pluginId: "test",
+        revision: "1",
+        arrange,
+      },
+    ],
+    subscribe: () => () => {},
+  },
+});
+const workingFirst: ChatArrange = (chats) => {
+  const working = chats.filter((chat) => chat.working);
+  const rest = chats
+    .filter((chat) => !chat.working)
+    .sort((a, b) => Number(b.unread) - Number(a.unread));
+  return [
+    ...(working.length
+      ? [
+          {
+            group: "working",
+            label: `${working.length} working`,
+            chats: working.map((chat) => chat.id),
+          },
+        ]
+      : []),
+    ...rest.map((chat) => chat.id),
+  ];
+};
+const arranged = (arrange: ChatArrange) => {
+  const f = fixture(
+    false,
+    false,
+    undefined,
+    undefined,
+    0,
+    undefined,
+    undefined,
+    {
+      ...arranging(arrange),
+    },
+  );
+  return {
+    ...f,
+    work() {
+      f.activity({
+        ...f.activitySnapshot,
+        status: "listening",
+        turns: [
+          {
+            channelId: id,
+            agent,
+            turnId: "one",
+            timestamp: Date.now(),
+            state: "working",
+          },
+        ],
+      });
+    },
+  };
+};
+const rowIds = () =>
+  Array.from(document.querySelectorAll("[data-solo-channel-id]")).map((row) =>
+    row.getAttribute("data-solo-channel-id"),
+  );
+
+it("collapses working chats into a plugin group that opens, persists and stays open for the selected chat", async () => {
+  const user = userEvent.setup();
+  const f = arranged(workingFirst);
+  expect(document.querySelector("[data-solo-group]")).toBeNull();
+  f.work();
+  const group = screen.getByRole("button", { name: /1 working/ });
+  expect(group).toHaveAttribute("aria-expanded", "false");
+  expect(rowIds()).toEqual([other]);
+  await user.click(group);
+  expect(group).toHaveAttribute("aria-expanded", "true");
+  expect(rowIds()).toEqual([id, other]);
+  cleanup();
+  const again = arranged(workingFirst);
+  again.work();
+  expect(screen.getByRole("button", { name: /1 working/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  expect(rowIds()).toEqual([id, other]);
+});
+
+it("keeps a group open while it holds the selected chat", () => {
+  fixture(false, false, undefined, undefined, 0, undefined, undefined, {
+    ...arranging((chats) => [
+      {
+        group: "open",
+        label: "Open",
+        chats: chats.filter((chat) => chat.selected).map((chat) => chat.id),
+      },
+    ]),
+  });
+  expect(screen.getByRole("button", { name: /Open/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  expect(rowIds()).toContain(other);
+});
+
+it("falls back to the default order when an arrangement throws", () => {
+  const plain = fixture();
+  const expected = rowIds();
+  cleanup();
+  plain.session.channels.list();
+  arranged(() => {
+    throw new Error("boom");
+  });
+  expect(rowIds()).toEqual(expected);
+  expect(document.querySelector("[data-solo-group]")).toBeNull();
 });

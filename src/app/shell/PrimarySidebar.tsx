@@ -40,7 +40,11 @@ import { targetKey } from "../../features/navigation/targets";
 import { readView, writeView } from "../../shared/view-state";
 import type { ChannelList } from "../../features/relay/contracts";
 import type { ContributionReader } from "../../features/conversation/contracts";
-import type { ChatIcon, ChatMenu } from "../../features/conversation/service";
+import type {
+  ChatArrangement,
+  ChatIcon,
+  ChatMenu,
+} from "../../features/conversation/service";
 import type { SidebarSections } from "../../features/channel-navigation/sidebar-sections-service";
 import { CommunitySignIn } from "../../features/federated-identity/CommunitySignIn";
 import type { FederatedIdentity } from "../../features/federated-identity/service";
@@ -61,6 +65,7 @@ type Props = {
   agents?: Agents | undefined;
   chatIcons?: ContributionReader<ChatIcon> | undefined;
   chatMenus?: ContributionReader<ChatMenu> | undefined;
+  chatArrangements?: ContributionReader<ChatArrangement> | undefined;
   sidebarSections?: SidebarSections | undefined;
   /** A plugin restriction shows only Solo; the saved filter returns after. */
   sidebarScope?: SidebarScope | undefined;
@@ -294,6 +299,7 @@ function ScopedSidebar({
                       target={props.target}
                       chatIcons={props.chatIcons}
                       chatMenus={props.chatMenus}
+                      chatArrangements={props.chatArrangements}
                       renderContents={(
                         ordinary,
                         ordinaryActions,

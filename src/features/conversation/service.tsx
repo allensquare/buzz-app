@@ -50,6 +50,29 @@ export type ChatMenu = Readonly<{
   component: ComponentType<ChatMenuProps>;
 }>;
 
+/** What the host knows about one Solo chat when arranging a workspace. */
+export type ChatFacts = Readonly<{
+  id: string;
+  title: string;
+  /** undefined for unfiled chats. */
+  workspaceId: string | undefined;
+  lastActivityAt: number | undefined;
+  unread: boolean;
+  working: boolean;
+  selected: boolean;
+}>;
+export type ChatGroup = Readonly<{
+  group: string;
+  label: string;
+  chats: readonly string[];
+}>;
+export type ChatArrangementEntry = string | ChatGroup;
+/** Called per workspace with chats newest first; returns chat ids and groups in display order. */
+export type ChatArrange = (
+  chats: readonly ChatFacts[],
+) => readonly ChatArrangementEntry[];
+export type ChatArrangement = Readonly<{ id: string; arrange: ChatArrange }>;
+
 export type Conversation = {
   chatMenus: ContributionReader<ChatMenu>;
   registerChatMenu(component: ComponentType<ChatMenuProps>): void;
@@ -86,6 +109,11 @@ export type Conversation = {
   /** Shows `component` as each Solo chat's sidebar icon while the providing
    * plugin runs. */
   registerChatIcon(component: ComponentType<ChatIconProps>): void;
+  /** Solo chat arrangements; the sidebar uses the first one. */
+  chatArrangements: ContributionReader<ChatArrangement>;
+  /** Orders and groups each Solo workspace's chats while the providing plugin
+   * runs; the host still renders and owns the rows. */
+  registerChatArrangement(arrange: ChatArrange): void;
   /** The host's date labels, so plugin text reads like the message rows. */
   format: {
     /** "9:05 AM", "Yesterday", "Monday", "Sat, Jun 20", "Jun 20, 2025";
@@ -152,6 +180,8 @@ export class ConversationService extends Service implements Conversation {
   private readonly chatMenuEntries;
   readonly chatIcons;
   private readonly chatIconEntries;
+  readonly chatArrangements;
+  private readonly chatArrangementEntries;
   readonly ui: Conversation["ui"];
   constructor(ctx: Context) {
     super(ctx, "conversation");
@@ -214,6 +244,12 @@ export class ConversationService extends Service implements Conversation {
       snapshot: chatIcons.snapshot,
       subscribe: chatIcons.subscribe,
     };
+    const chatArrangements = createContributions<ChatArrangement>(ctx);
+    this.chatArrangementEntries = chatArrangements;
+    this.chatArrangements = {
+      snapshot: chatArrangements.snapshot,
+      subscribe: chatArrangements.subscribe,
+    };
     const Tabs = (props: PageTabsProps) => {
       const Provided = tabs.snapshot()[0]?.component;
       return Provided ? <Provided {...props} /> : null;
@@ -247,6 +283,14 @@ export class ConversationService extends Service implements Conversation {
     if (typeof component !== "function")
       throw new Error("A chat icon needs a component");
     this.chatIconEntries.register(this.ctx, { id: "chat-icon", component });
+  }
+  registerChatArrangement(arrange: ChatArrange) {
+    if (typeof arrange !== "function")
+      throw new Error("A chat arrangement needs a function");
+    this.chatArrangementEntries.register(this.ctx, {
+      id: "chat-arrangement",
+      arrange,
+    });
   }
   registerMessageAction(value: MessageAction) {
     validate(value);

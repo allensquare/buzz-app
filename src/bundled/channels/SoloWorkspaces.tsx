@@ -12,6 +12,8 @@ import {
 } from "../../features/channel-navigation/solo-successor";
 import type { ChannelSummary } from "../../features/relay/contracts";
 import type { ChannelLifecycleAction } from "../../features/relay/channel-lifecycle-protocol";
+import { arrangeChats } from "../../features/channel-navigation/solo-arrangement";
+import type { ChatArrange } from "../../features/conversation/service";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useDroppable } from "@dnd-kit/core";
 import {
@@ -20,6 +22,7 @@ import {
 } from "../../features/channel-navigation/ChannelSidebarDnd";
 import { WorkspaceSettings } from "../../features/solo/WorkspaceSettings";
 import {
+  Fragment,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -58,6 +61,10 @@ export type ChatListItem = Readonly<{
   title: string;
   /** Stays listed past a workspace's cap, like the open or an unread chat. */
   pinned?: boolean;
+  unread?: boolean;
+  working?: boolean;
+  selected?: boolean;
+  lastActivityAt?: number | undefined;
 }>;
 
 /** Each workspace lists its most recent chats; Show more adds a step. */
@@ -76,7 +83,9 @@ export function SoloWorkspaces({
   onConverted,
   visit,
   draft,
+  arrange,
 }: {
+  arrange?: ChatArrange | undefined;
   draft?: { projectId?: string | undefined; content: ReactNode } | undefined;
   onConverted?: ((id: string) => void) | undefined;
   visit?: AbortSignal;
@@ -220,15 +229,49 @@ export function SoloWorkspaces({
       return next;
     });
   }, [draftProject, scope]);
+  const openGroupsKey = "solo:open-groups";
+  const [openGroups, setOpenGroups] = useState<string[]>(() => {
+    const saved = readView<unknown>(scope, openGroupsKey, []);
+    return Array.isArray(saved)
+      ? saved.filter((key): key is string => typeof key === "string")
+      : [];
+  });
+  const arranged = (
+    id: string,
+    rows: readonly ChatListItem[],
+  ): (ChatListItem & { group?: { id: string; label: string } })[] => {
+    const byId = new Map(rows.map((item) => [item.id, item]));
+    return arrangeChats(
+      arrange,
+      rows.map((item) => ({
+        id: item.id,
+        title: item.title,
+        workspaceId: id || undefined,
+        lastActivityAt: item.lastActivityAt,
+        unread: item.unread ?? false,
+        working: item.working ?? false,
+        selected: item.selected ?? false,
+      })),
+    ).flatMap(({ id: chatId, group }) => {
+      const item = byId.get(chatId);
+      return item ? [group ? { ...item, group } : item] : [];
+    });
+  };
   const projects = [
     ...groups.map((group) => ({
       ...group,
-      rows: chats.filter((item) => assigned[item.id] === group.id),
+      rows: arranged(
+        group.id,
+        chats.filter((item) => assigned[item.id] === group.id),
+      ),
     })),
     {
       id: "",
       name: "Chats",
-      rows: chats.filter((item) => !ids.has(assigned[item.id] ?? "")),
+      rows: arranged(
+        "",
+        chats.filter((item) => !ids.has(assigned[item.id] ?? "")),
+      ),
     },
   ];
   // A collapse request takes effect after the editor closes. Keep its draft and
@@ -330,6 +373,7 @@ export function SoloWorkspaces({
         (item, index) =>
           index < limit ||
           item.pinned ||
+          item.group ||
           item.id === renaming ||
           held.has(item.id),
       );
@@ -347,6 +391,22 @@ export function SoloWorkspaces({
         hidden: project.rows.length - listed.length,
       };
     });
+  const groupOpen = (
+    projectId: string,
+    groupId: string,
+    rows: readonly (ChatListItem & { group?: { id: string } })[],
+  ) =>
+    openGroups.includes(`${projectId}/${groupId}`) ||
+    rows.some(
+      (item) =>
+        item.group?.id === groupId && (item.selected || item.id === renaming),
+    );
+  const toggleGroup = (key: string, open: boolean) => {
+    const next = openGroups.filter((item) => item !== key);
+    if (open) next.push(key);
+    setOpenGroups(next);
+    writeView(scope, openGroupsKey, next);
+  };
   const soloNeighborsRef = handoff?.soloNeighbors;
   useLayoutEffect(() => {
     if (!soloNeighborsRef) return;
@@ -354,7 +414,13 @@ export function SoloWorkspaces({
       rows: project.rows,
       shown: collapsed.includes(project.id)
         ? []
-        : project.listed.map((item) => item.id),
+        : project.listed
+            .filter(
+              (item) =>
+                !item.group ||
+                groupOpen(project.id, item.group.id, project.listed),
+            )
+            .map((item) => item.id),
     }));
     const neighbors = (id: string) => soloNeighbors(shown, id);
     soloNeighborsRef.current = neighbors;
@@ -517,93 +583,124 @@ export function SoloWorkspaces({
                   <div>{draft.content}</div>
                 </ChatActionsMenu>
               )}
-              {project.listed.map((item) => {
-                const channel = channels.channels.find(
-                  (channel) => channel.id === item.id,
-                );
-                const rename =
-                  !renaming &&
-                  deleting !== project.id &&
-                  canEditLifetime(session, channel)
-                    ? () => {
-                        if (
-                          renaming ||
-                          deleting === project.id ||
-                          !canEditLifetime(session, channel)
-                        )
-                          return false;
-                        setRenaming(item.id);
-                        return true;
-                      }
-                    : undefined;
-                if (renaming === item.id)
+              {project.listed.map((item, index) => {
+                const row = () => {
+                  const channel = channels.channels.find(
+                    (channel) => channel.id === item.id,
+                  );
+                  const rename =
+                    !renaming &&
+                    deleting !== project.id &&
+                    canEditLifetime(session, channel)
+                      ? () => {
+                          if (
+                            renaming ||
+                            deleting === project.id ||
+                            !canEditLifetime(session, channel)
+                          )
+                            return false;
+                          setRenaming(item.id);
+                          return true;
+                        }
+                      : undefined;
+                  if (renaming === item.id)
+                    return (
+                      <SoloChatName
+                        key={item.id}
+                        session={session}
+                        id={item.id}
+                        title={item.title}
+                        close={(focus) => {
+                          setRenaming(undefined);
+                          if (focus) setRowFocus(item.id);
+                        }}
+                      />
+                    );
                   return (
-                    <SoloChatName
+                    <ChatActionsMenu
                       key={item.id}
-                      session={session}
                       id={item.id}
                       title={item.title}
-                      close={(focus) => {
-                        setRenaming(undefined);
-                        if (focus) setRowFocus(item.id);
-                      }}
-                    />
+                      indicator={
+                        <ChatSharedMark
+                          session={session}
+                          channel={channel}
+                          onOpen={(trigger) =>
+                            setSharing({ id: item.id, visit, trigger })
+                          }
+                        />
+                      }
+                      className={styles.organizedRow}
+                      content={
+                        channel && (
+                          <>
+                            {renderChatMenu?.(item.id)}
+                            <SoloChatMenuItems
+                              session={session}
+                              channel={channel}
+                              onShare={() => setSharing({ id: item.id, visit })}
+                              onConvert={() =>
+                                setConverting({ id: item.id, visit })
+                              }
+                              onMove={(projectId) => move(item.id, projectId)}
+                              onNewWorkspace={() => setCreatingFor(item)}
+                              onSettings={() =>
+                                setChatSettings({ item, visit })
+                              }
+                              onRename={rename && (() => void rename())}
+                              onLifecycle={
+                                handoff &&
+                                ((action) => chooseLifecycle(channel, action))
+                              }
+                              onReadResult={(error) =>
+                                setReadError((current) =>
+                                  error
+                                    ? { id: item.id, message: error }
+                                    : current?.id === item.id
+                                      ? undefined
+                                      : current,
+                                )
+                              }
+                            />
+                          </>
+                        )
+                      }
+                    >
+                      <DraggableChannel
+                        channelId={item.id}
+                        sectionKey={DROP + project.id}
+                      >
+                        {renderChat(item, rename)}
+                      </DraggableChannel>
+                    </ChatActionsMenu>
                   );
+                };
+                const group = item.group;
+                if (!group) return row();
+                const open = groupOpen(project.id, group.id, project.listed);
                 return (
-                  <ChatActionsMenu
-                    key={item.id}
-                    id={item.id}
-                    title={item.title}
-                    indicator={
-                      <ChatSharedMark
-                        session={session}
-                        channel={channel}
-                        onOpen={(trigger) =>
-                          setSharing({ id: item.id, visit, trigger })
+                  <Fragment key={item.id}>
+                    {project.listed[index - 1]?.group?.id !== group.id && (
+                      <NavigationItem
+                        variant="text"
+                        data-solo-group={group.id}
+                        label={group.label}
+                        aria-expanded={open}
+                        icon={
+                          <span
+                            className={`${styles.conversationIcon} ${styles.groupCaret}`}
+                            aria-hidden="true"
+                          >
+                            <CaretDownIcon size={16} />
+                          </span>
+                        }
+                        onClick={() =>
+                          toggleGroup(`${project.id}/${group.id}`, !open)
                         }
                       />
-                    }
-                    className={styles.organizedRow}
-                    content={
-                      channel && (
-                        <>
-                          {renderChatMenu?.(item.id)}
-                          <SoloChatMenuItems
-                            session={session}
-                            channel={channel}
-                            onShare={() => setSharing({ id: item.id, visit })}
-                            onConvert={() =>
-                              setConverting({ id: item.id, visit })
-                            }
-                            onMove={(projectId) => move(item.id, projectId)}
-                            onNewWorkspace={() => setCreatingFor(item)}
-                            onSettings={() => setChatSettings({ item, visit })}
-                            onRename={rename && (() => void rename())}
-                            onLifecycle={
-                              handoff &&
-                              ((action) => chooseLifecycle(channel, action))
-                            }
-                            onReadResult={(error) =>
-                              setReadError((current) =>
-                                error
-                                  ? { id: item.id, message: error }
-                                  : current?.id === item.id
-                                    ? undefined
-                                    : current,
-                              )
-                            }
-                          />
-                        </>
-                      )
-                    }
-                  >
-                    <DraggableChannel
-                      channelId={item.id}
-                      sectionKey={DROP + project.id}
-                    >
-                      {renderChat(item, rename)}
-                    </DraggableChannel>
-                  </ChatActionsMenu>
+                    )}
+                    {open && row()}
+                  </Fragment>
                 );
               })}
               {(project.hidden > 0 || project.foldable) && (

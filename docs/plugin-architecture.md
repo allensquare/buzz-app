@@ -303,6 +303,34 @@ given, the native Git import refuses a reference whose tip is any other commit, 
 branch that moves after a catalog review cannot install unreviewed code, and the
 review checks the fetched commit again before offering to install.
 
+### Solo chat arrangement
+
+`ctx.conversation.registerChatArrangement(arrange)` lets a plugin order and group
+the Solo chats of each workspace; the first registration wins. The host still
+renders every row (unread, working, menus, rename, drag) and persists group
+open state; a group is a collapsed-by-default disclosure that opens by itself
+for the selected or renamed chat.
+
+```ts
+ctx.conversation.registerChatArrangement((chats) => {
+  const working = chats.filter((chat) => chat.working);
+  return [
+    ...(working.length
+      ? [{ group: "working", label: `${working.length} working`, chats: working.map((c) => c.id) }]
+      : []),
+    ...chats.filter((chat) => !chat.working).map((chat) => chat.id),
+  ];
+});
+```
+
+`arrange` runs per workspace with `ChatFacts` newest first and must be pure.
+The host normalizes the result: a throw or non-array keeps the default order;
+unknown and duplicate ids are ignored (first wins); groups need a non-empty
+`group` id and non-blank `label` or their members are ungrouped, and a repeated
+group id ungroups its later members; empty groups are dropped; unmentioned chats
+are appended in default order, so no chat can be hidden. Grouped chats bypass
+the workspace's Show more cap.
+
 ### Conversation sidebar sections
 
 A plugin may register a versioned `sidebarSections` contribution. Read it with
