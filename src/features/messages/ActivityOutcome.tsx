@@ -12,8 +12,6 @@ export function activityOutcomeReason(state: string, reason?: string) {
       reason ||
       "This request ended before it could finish. Try again in a new thread, or choose a different model."
     );
-  if (state === "unknown")
-    return "Buzz couldn’t confirm whether this request finished. Check the conversation before trying again.";
   return "This request was stopped.";
 }
 
