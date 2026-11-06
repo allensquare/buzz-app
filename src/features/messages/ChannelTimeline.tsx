@@ -1,5 +1,4 @@
 // biome-ignore-all lint/a11y/noNoninteractiveTabindex: The history region must support keyboard scrolling.
-import { TemporaryOutcomeExamples } from "./TemporaryOutcomeExamples";
 import { AgentConnectionSetup } from "../agents/AgentConnectionSetup";
 import { TypingIndicator, useLiveConversationAgents } from "./TypingIndicator";
 import { ActivityGroupPreview } from "./ActivityGroupPreview";
@@ -2014,13 +2013,6 @@ function Timeline({
           }
           openActivity={onOpenLink}
           canOpenActivity={canOpenLink}
-        />
-        <TemporaryOutcomeExamples
-          key={`comparison:${channelId}`}
-          scope={`${scope}:${channelId}`}
-          profile={profiles.get(queries.viewer ?? "")}
-          media={queries.media}
-          side="channel"
         />
         <div className={styles.timelineEnd} aria-hidden="true" />
       </div>
