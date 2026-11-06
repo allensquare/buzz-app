@@ -362,18 +362,23 @@ function Bubble({
   stage: RefObject<HTMLElement | null>;
 }) {
   const level = muted ? 0 : Math.max(0, Math.min(1, person.level));
-  const label = `${person.name}${person.own ? (muted ? " (you, muted)" : " (you)") : ""}${level > 0 ? ", speaking" : ""}${person.listening ? ", listening to you" : ""}`;
+  const thinking = !!person.thinking && level === 0;
+  const label = `${person.name}${person.own ? (muted ? " (you, muted)" : " (you)") : ""}${level > 0 ? ", speaking" : ""}${thinking ? ", thinking" : ""}${person.listening ? ", listening to you" : ""}`;
   return (
     <HuddleAvatarToss stage={stage}>
       <span
         className={styles.bubbleArtwork}
+        data-thinking={thinking || undefined}
         style={
           {
-            "--voice-scale": 1 + Math.min(level, 0.6) * 0.06,
+            "--voice-scale": thinking ? 0.8 : 1 + Math.min(level, 0.6) * 0.06,
           } as CSSProperties
         }
       >
         <SpeakingHalo level={level} person={person} />
+        {thinking && (
+          <span className={styles.thinkingRing} aria-hidden="true" />
+        )}
         <HuddleAvatarMotion participant={person.key} playful level={level}>
           <Avatar
             size="fill"
@@ -383,14 +388,6 @@ function Bubble({
           />
         </HuddleAvatarMotion>
         <NameBadge name={person.name} />
-        {person.listening && (
-          <span
-            className={`${styles.listening} text-caption text-secondary`}
-            aria-hidden="true"
-          >
-            listening to you
-          </span>
-        )}
       </span>
     </HuddleAvatarToss>
   );

@@ -1,3 +1,4 @@
+import { addChannelMember } from "../channel-members/members";
 import { createPcmSender } from "./sender";
 import type { ChannelSummary } from "../relay/contracts";
 import type { AudioSettingsState } from "./audio-settings";
@@ -20,6 +21,7 @@ export type HuddleSnapshot = Readonly<{
   muted: boolean;
   participants: readonly string[];
   listening?: readonly string[];
+  thinking?: readonly string[];
   error?: string;
 }>;
 type Attempt = {
@@ -42,6 +44,10 @@ export function createHuddles(
   relay: RelayData,
   bridge: HuddleBridge,
   openAudio: OpenHuddleAudio,
+  dmAgent?: (
+    connection: RelaySnapshot,
+    destination: HuddleDestination,
+  ) => string | undefined,
 ) {
   let snapshot = idle;
   let requests: ReturnType<typeof createHuddleRequests> | undefined;
@@ -287,6 +293,37 @@ export function createHuddles(
         ? { requester: incoming.requester, participants: incoming.participants }
         : {}),
     });
+    const key = dmAgent?.(connection, destination);
+    let invited = false;
+    const inviteAgent = async (roomId: string) => {
+      if (!key || invited) return;
+      invited = true;
+      try {
+        await connection.session.channels.resolve?.([roomId]);
+        if (!valid(attempt)) return;
+        if (dmAgent?.(connection, destination) !== key)
+          throw new Error("The agent is no longer available for voice");
+        const channel = connection.session.channels.get?.(roomId);
+        if (
+          !channel?.huddle ||
+          channel.parentChannelId !== destination.channelId
+        )
+          throw new Error("Couldn’t verify the Huddle room");
+        if (!channel.members?.includes(key))
+          await addChannelMember(
+            connection.session,
+            roomId,
+            key,
+            attempt.abort.signal,
+          );
+      } catch (error) {
+        if (valid(attempt))
+          update({
+            ...snapshot,
+            error: `Couldn’t add the agent: ${message(error)}. Use Huddle options → Add someone to retry.`,
+          });
+      }
+    };
     const receive = (event: HuddleUpdate) => {
       if (!valid(attempt)) return;
       if (event.type === "ended") {
@@ -329,6 +366,7 @@ export function createHuddles(
           ? { phase: "connected", room: event.room }
           : {}),
       });
+      if (event.type === "connected") void inviteAgent(event.room);
     };
     try {
       if (discover) {
@@ -415,6 +453,18 @@ export function createHuddles(
     );
   return {
     snapshot: () => snapshot,
+    voiceThinking(id: string, key: string, active: boolean) {
+      if (snapshot.id !== id || (active && snapshot.phase !== "connected"))
+        return;
+      const thinking = snapshot.thinking ?? [];
+      if (thinking.includes(key) === active) return;
+      update({
+        ...snapshot,
+        thinking: active
+          ? [...thinking, key]
+          : thinking.filter((peer) => peer !== key),
+      });
+    },
     voiceListening(id: string, key: string, active: boolean) {
       if (snapshot.id !== id || (active && snapshot.phase !== "connected"))
         return;

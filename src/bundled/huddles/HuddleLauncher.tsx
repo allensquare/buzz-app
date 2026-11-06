@@ -1,3 +1,6 @@
+import type { Agents } from "../../features/agents/service";
+import { useAgentsSnapshot } from "../../features/agents/react";
+import { dmVoiceAgent } from "../../features/huddle/dm-agent";
 import type { ChatMenuProps } from "../../features/conversation/service";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChannelLauncherProps } from "../../features/panels/service";
@@ -35,6 +38,7 @@ type Props = Pick<
   huddles: Huddles;
   showWindow(): Promise<void>;
   menu?: boolean;
+  agents?: Agents;
 };
 const focusPlayer = () => document.getElementById("huddle-capsule")?.focus();
 
@@ -86,6 +90,7 @@ export function SoloHuddleMenu({
 
 export function HuddleLauncher(props: Props) {
   const { context, available, huddles } = props;
+  useAgentsSnapshot(props.agents);
   const call = useSyncExternalStore(huddles.subscribe, huddles.snapshot);
   const connection = useRelayConnection(props.relay);
   const incoming = useIncomingHuddle(
@@ -112,6 +117,12 @@ export function HuddleLauncher(props: Props) {
     call.destination?.scope === context.scope &&
     call.destination.viewer === context.viewer &&
     call.destination.channelId === context.channelId;
+  const choices = useSyncExternalStore(
+    connection.session.agentChoices.subscribe,
+    connection.session.agentChoices.snapshot,
+  );
+  const voiceAgent =
+    props.agents && dmVoiceAgent(connection, context, props.agents);
   if (parent?.archived) return null;
   if (props.menu && active) return null;
   if (here && call.id)
@@ -127,9 +138,11 @@ export function HuddleLauncher(props: Props) {
           ? parent?.channelType === "solo"
             ? "Join huddle"
             : `Join active huddle (${incoming.participants} ${incoming.participants === 1 ? "participant" : "participants"})`
-          : parent?.channelType === "solo"
-            ? "Start a huddle"
-            : "Start or join a huddle";
+          : voiceAgent
+            ? `Talk with ${voiceAgent.name}`
+            : parent?.channelType === "solo"
+              ? "Start a huddle"
+              : "Start or join a huddle";
   const activate = () => {
     if (!available()) return;
     if (call.phase === "connecting") void huddles.leave();
@@ -150,6 +163,20 @@ export function HuddleLauncher(props: Props) {
     );
   // Keep active/incoming calls visible; idle Solo calls live in Chat actions.
   if (parent?.channelType === "solo" && !active && !joinable) return null;
+  // Human DMs keep their normal call action; unsupported agent DMs do not
+  // promise voice. Active and incoming calls remain available above.
+  const dmPeers =
+    parent?.channelType === "dm"
+      ? parent.members?.filter((key) => key !== context.viewer)
+      : undefined;
+  if (
+    !active &&
+    !joinable &&
+    dmPeers?.length === 1 &&
+    choices.identities.some((agent) => agent.pubkey === dmPeers[0]) &&
+    !voiceAgent
+  )
+    return null;
   // The header button is easy to hit by accident, so a new call asks first.
   const close = () => setConfirming(undefined);
   return (
@@ -166,7 +193,11 @@ export function HuddleLauncher(props: Props) {
       {confirming === target && (
         <AlertDialog
           title="Start a huddle?"
-          description="Your microphone will turn on, and others in this conversation can join."
+          description={
+            voiceAgent
+              ? `Your microphone will turn on and ${voiceAgent.name} will join automatically.`
+              : "Your microphone will turn on, and others in this conversation can join."
+          }
           initialFocus={proceed}
           onClose={close}
           actions={

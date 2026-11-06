@@ -739,6 +739,22 @@ function Fixture() {
           Switch conversation
         </Button>
         {call.phase === "connected" && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (!call.id) return;
+              huddles.voiceListening(call.id, peer, true);
+              huddles.voiceThinking(
+                call.id,
+                peer,
+                !call.thinking?.includes(peer),
+              );
+            }}
+          >
+            Toggle agent thinking
+          </Button>
+        )}
+        {call.phase === "connected" && (
           <>
             <Button
               variant="ghost"

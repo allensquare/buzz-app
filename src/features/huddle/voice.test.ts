@@ -59,7 +59,7 @@ afterEach(async () => {
   await Promise.all(disposals.splice(0).map((dispose) => dispose()));
   vi.useRealTimers();
 });
-function setup() {
+function setup(type = "test/voice") {
   const h = observable(),
     a = observable(),
     r = observable(),
@@ -83,7 +83,7 @@ function setup() {
     name: "Room",
     members: ["owner", "a", "b"],
   };
-  let running = [agent("a"), agent("b")];
+  let running = [agent("a"), agent("b")].map((agent) => ({ ...agent, type }));
   const connections = new Map<
     string,
     { input: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> }
@@ -95,9 +95,7 @@ function setup() {
     connections.set(seat.agent.pubkey, connection);
     return connection;
   });
-  let types = [
-    { key: "test/voice", voice },
-  ] as unknown as RegisteredAgentType[];
+  let types = [{ key: type, voice }] as unknown as RegisteredAgentType[];
   const callbacks = new Map<string, (event: HuddleUpdate) => void>();
   const bridge = {
     available: true,
@@ -135,12 +133,14 @@ function setup() {
   } as unknown as Agents;
   const report = vi.fn();
   const listening = vi.fn();
+  const thinking = vi.fn();
   const start = () => {
     const dispose = createHuddleVoices(
       {
         snapshot: () => call,
         subscribe: h.subscribe,
         voiceListening: listening,
+        voiceThinking: thinking,
       },
       agents,
       relay,
@@ -158,6 +158,7 @@ function setup() {
     callbacks,
     report,
     listening,
+    thinking,
     resolveRoom,
     start,
     call: (patch: Partial<HuddleSnapshot>) => {
@@ -558,5 +559,23 @@ it.each(["abort", "failure"])(
         "a: send failed. Leave and rejoin the Huddle to retry.",
       );
     else expect(f.report).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["buzz.codex/codex", "test/voice"])(
+  "only Codex seats publish thinking animation state (%s)",
+  async (type) => {
+    const f = setup(type);
+    f.start();
+    await vi.waitFor(() => expect(f.connections.size).toBe(2));
+    const seat = required(f.seatArgs.get("a"));
+    seat.thinking?.(true);
+    if (type === "buzz.codex/codex")
+      expect(f.thinking).toHaveBeenCalledWith("human", "a", true);
+    else expect(f.thinking).not.toHaveBeenCalled();
+    f.room({ members: ["owner", "b"] });
+    f.thinking.mockClear();
+    seat.thinking?.(true);
+    expect(f.thinking).not.toHaveBeenCalled();
   },
 );

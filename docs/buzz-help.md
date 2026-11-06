@@ -20,9 +20,12 @@ the interface unless an available tool actually supports that action.
 On supported desktop hosts, a running local agent with voice support joins your
 connected Huddle when it is also a member of that Huddle's room. Membership of
 the parent conversation alone is insufficient. Several agents can participate.
-Your own active agents show “listening to you” in the Huddle. Remote participants
-see no listening badge: the agent’s own client enforces who it hears, and other
-clients cannot verify that. Each filters for audio from your connected devices
+Starting a Huddle in an eligible one-to-one DM with your running Codex agent
+automatically adds it to the Huddle room. You can also add agents through the
+Huddle's member controls. On the hosting computer, a working Codex agent shows
+a smaller avatar with a rotating ring and activity dots in the compact player;
+speaking restores its normal size. This work state is not shared with remote
+participants. The agent’s own client enforces who it hears. Each filters for audio from your connected devices
 and speaks to everyone. The current audio protocol can briefly misattribute delayed
 audio when a connection slot is reused; this is not a strict privacy guarantee.
 Other people or speakers near your microphones can also be heard. Simultaneous
