@@ -770,8 +770,9 @@ available rather than silently discarding it.
   sessions** doesn't find them, because it only matches channel conversations.
 - Confirmed failures keep **Couldn’t finish** visible after the working indicator
   stops, even when the agent sends no reply. Cancelled requests show **Stopped**.
-  These outcomes do not fade or expire after viewing. An uncertain status does
-  not create an error balloon.
+  There is no viewing timer. Outcomes supplied only by live activity may be lost
+  after restarting Buzz; signed failure messages remain in conversation history.
+  An uncertain status does not create an error balloon.
   Expand the summary to read the explanation and recorded updates, view Activity,
   or use supported recovery actions. The expanded outcome sits below **Collapse**;
   collapsing keeps the outcome visible.
@@ -783,7 +784,9 @@ available rather than silently discarding it.
   Ordinary replies and partial results remain visible. Failures of channel
   requests also appear in the channel.
 - For agents running on this device, expanded outcomes can offer **Retry** to ask
-  again and **Dismiss** to hide the failure.
+  again and **Dismiss** to hide the outcome for the current app session. Dismiss
+  does not delete a recorded failure message; it can show the outcome again after
+  restarting Buzz.
 - Any agent running on this device can read and change some Buzz settings
   here when you ask it to: appearance mode, interface size, accent color,
   vibe level, where new threads open, Solo follow-up behavior, automatic
