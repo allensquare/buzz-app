@@ -19,9 +19,10 @@ pub(crate) fn install<R: Runtime>(app: &AppHandle<R>) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let Ok(mut signals) = SIGNALS
-            .iter()
-            .map(|&number| signal(SignalKind::from_raw(number)))
-            .collect::<Result<Vec<_>, _>>()
+            .into_iter()
+            .filter(|&number| !ignored(number))
+            .map(|number| Ok((number, signal(SignalKind::from_raw(number))?)))
+            .collect::<std::io::Result<Vec<_>>>()
         else {
             eprintln!("Buzz cannot quit on a termination signal");
             return;
@@ -37,13 +38,23 @@ pub(crate) fn install<R: Runtime>(app: &AppHandle<R>) {
     });
 }
 
+/// Whether whoever launched Buzz asked it to ignore the signal, as `nohup`
+/// does SIGHUP. Handling it would override that.
+fn ignored(number: i32) -> bool {
+    // SAFETY: with no new action, sigaction only reads the current one.
+    unsafe {
+        let mut action = std::mem::zeroed::<libc::sigaction>();
+        libc::sigaction(number, std::ptr::null(), &mut action) == 0
+            && action.sa_sigaction == libc::SIG_IGN
+    }
+}
+
 /// The number of the next signal to arrive.
-async fn next(signals: &mut [Signal]) -> i32 {
+async fn next(signals: &mut [(i32, Signal)]) -> i32 {
     poll_fn(|cx| {
         signals
             .iter_mut()
-            .zip(SIGNALS)
-            .find_map(|(signal, number)| signal.poll_recv(cx).is_ready().then_some(number))
+            .find_map(|(number, signal)| signal.poll_recv(cx).is_ready().then_some(*number))
             .map_or(Poll::Pending, Poll::Ready)
     })
     .await
