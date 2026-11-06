@@ -83,14 +83,26 @@ export function ActivityGroupPreview({
   const named = (id: string) =>
     resolveName(id, profiles.get(id)?.name ?? id.slice(0, 10));
   const name = named(primary);
-  const speaker = named(row.authorId);
-  const text = Array.from(messagePreviewText(row.content).replace(/\s+/g, " "));
+  const previewRow = group.workingUpdate ?? row;
+  const speaker = named(previewRow.authorId);
+  const text = Array.from(
+    messagePreviewText(previewRow.content).replace(/\s+/g, " "),
+  );
   const preview =
     text.length > 280 ? `${text.slice(0, 279).join("")}…` : text.join("");
   const outcomeText = outcomes
     .map(
       (entry) => `${named(entry.agent)}: ${activityOutcomeLabel(entry.state)}`,
     )
+    .join("; ");
+  const namedPreview = `${speaker}: ${preview}`;
+  const summaryLabel = [
+    outcomeText,
+    working
+      ? `${speaker}: still working — ${preview}`
+      : !outcomeText && namedPreview,
+  ]
+    .filter(Boolean)
     .join("; ");
   return (
     <AgentResponsePreview
@@ -116,7 +128,7 @@ export function ActivityGroupPreview({
         trigger={disclosure}
         expanded={expanded}
         onToggle={onToggle}
-        label={`${expanded ? "Collapse" : "Show"} activity history: ${outcomeText || `${speaker}: ${preview}`}`}
+        label={`${expanded ? "Collapse" : "Show"} activity history: ${summaryLabel}`}
         icon={
           <RemoteWorkIcon
             session={session}
@@ -137,11 +149,11 @@ export function ActivityGroupPreview({
                   }
                 />
               ))}
-              {working && <ShimmerText active>{preview}</ShimmerText>}
+              {working && <ShimmerText active>{namedPreview}</ShimmerText>}
             </span>
           ) : (
             <ShimmerText active={working || live}>
-              {participants.length > 1 ? `${speaker}: ${preview}` : preview}
+              {participants.length > 1 ? namedPreview : preview}
             </ShimmerText>
           )
         }

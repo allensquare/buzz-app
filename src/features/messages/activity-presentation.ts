@@ -27,6 +27,8 @@ export type ActivityPresentation = ActivityRun & {
   /** Agents whose current work or outcome this group can actually present. */
   presentedParticipants: string[];
   working: boolean;
+  /** Latest recorded update belonging to a participant still working here. */
+  workingUpdate: ChannelMessage | undefined;
   standalone: boolean;
 };
 export type ActivityRowPresentation = {
@@ -317,6 +319,14 @@ export function activityPresentation(
           working.has(agent) || outcomes.some((entry) => entry.agent === agent),
       ),
       working: liveParticipants.some((agent) => working.has(agent)),
+      workingUpdate: history
+        .filter(
+          (row) =>
+            row.audience === "agents" &&
+            liveParticipants.includes(row.authorId) &&
+            working.has(row.authorId),
+        )
+        .at(-1),
       standalone,
     });
   }

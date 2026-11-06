@@ -251,6 +251,102 @@ it("shows failed and stopped participants independently without attributing sibl
   }
 });
 
+it.each(["signed failure", "failed update", "working update"])(
+  "keeps the working participant named beside a failure when the latest row is a %s",
+  (latest) => {
+    const f = fixture();
+    const helperStep = {
+      ...step,
+      id: "helper-step",
+      authorId: "helper",
+      createdAt: 101,
+      content: "Helper reading files",
+    };
+    const { audience: _audience, ...publicStep } = step;
+    const last: ChannelMessage =
+      latest === "signed failure"
+        ? {
+            ...publicStep,
+            id: "failure",
+            createdAt: 102,
+            notice: "execution-failure",
+            content: "Provider unavailable",
+          }
+        : {
+            ...(latest === "working update" ? helperStep : step),
+            id: "latest-step",
+            createdAt: 102,
+            content:
+              latest === "working update"
+                ? "Helper checking results"
+                : "Agent checking results",
+          };
+    const rows = [step, helperStep, last];
+    const preview =
+      latest === "working update" ? last.content : helperStep.content;
+    function Preview() {
+      const presentation = useActivityPresentation(
+        rows,
+        f.activity,
+        new Set(["agent", "helper"]),
+        "request",
+      );
+      const group = presentation.groups[0];
+      if (!group) throw new Error("Missing group");
+      return (
+        <ActivityGroupPreview
+          group={group}
+          profiles={new Map()}
+          media={() => undefined}
+          expanded={false}
+          onToggle={() => {}}
+        />
+      );
+    }
+    try {
+      f.local
+        .begin({
+          scope: "test",
+          agent: "agent",
+          channelId: "channel",
+          messageId: "request",
+          threadRootId: "request",
+        })
+        .finish({ ok: false, error: "Provider unavailable" });
+      const helper = f.local.begin({
+        scope: "test",
+        agent: "helper",
+        channelId: "channel",
+        messageId: "request",
+        threadRootId: "request",
+      });
+      helper.started();
+      const view = render(<Preview />);
+      expect(screen.getByText("Couldn’t finish")).toBeVisible();
+      expect(screen.getByText(`helper: ${preview}`)).toHaveAttribute(
+        "data-active",
+        "true",
+      );
+      expect(
+        screen.getByRole("button", {
+          name: `Show activity history: agent: Couldn’t finish; helper: still working — ${preview}`,
+        }),
+      ).toBeVisible();
+      expect(screen.queryByText("Provider unavailable")).toBeNull();
+      act(() => helper.finish({ ok: true }));
+      expect(screen.getByText("Couldn’t finish")).toBeVisible();
+      expect(view.container.querySelector("[data-active]")).toBeNull();
+      expect(
+        screen.getByRole("button", {
+          name: "Show activity history: agent: Couldn’t finish",
+        }),
+      ).toBeVisible();
+    } finally {
+      f.dispose();
+    }
+  },
+);
+
 it.each([
   "ordinary reply",
   "unlinked",
