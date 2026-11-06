@@ -768,10 +768,13 @@ available rather than silently discarding it.
   sessions**, which searches goose's local history and can take a while. Watch
   and timer turns from before this version aren't listed, and **Search older
   sessions** doesn't find them, because it only matches channel conversations.
-- Failed requests show **Couldn’t finish**, cancelled requests **Stopped**, and
-  unconfirmed outcomes **Status unavailable** in the agent's activity bubble.
+- Confirmed failures keep **Couldn’t finish** visible after the working indicator
+  stops, even when the agent sends no reply. Cancelled requests show **Stopped**.
+  These outcomes do not fade or expire after viewing. An uncertain status does
+  not create an error balloon.
   Expand the summary to read the explanation and recorded updates, view Activity,
-  or use supported recovery actions. **Collapse** keeps the outcome visible.
+  or use supported recovery actions. The expanded outcome sits below **Collapse**;
+  collapsing keeps the outcome visible.
   For your remote agents, Buzz checks again automatically when no final result is
   available yet, or after a temporary lookup failure, while you stay signed in
   and connected. Requests sent to several agents keep each agent's outcome visible.

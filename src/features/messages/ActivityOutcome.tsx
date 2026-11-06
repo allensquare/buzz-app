@@ -2,7 +2,6 @@ import { WarningCircleIcon } from "../../shared/design-system/icons";
 
 export function activityOutcomeLabel(state: string) {
   if (state === "error") return "Couldn’t finish";
-  if (state === "unknown") return "Status unavailable";
   if (state === "stopped") return "Stopped";
   return undefined;
 }
@@ -18,7 +17,7 @@ export function activityOutcomeReason(state: string, reason?: string) {
   return "This request was stopped.";
 }
 
-/** Failure, cancellation and uncertainty share geometry, with distinct meaning. */
+/** Confirmed failure and cancellation share geometry, with distinct meaning. */
 export function ActivityOutcome({
   state,
   name,

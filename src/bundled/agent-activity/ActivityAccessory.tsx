@@ -133,10 +133,7 @@ function MessageActivity(
     [snapshot, channelId, messageId, hasWork],
   );
   const entries = [...work.live, ...work.stopped].filter((entry) => {
-    const outcome =
-      entry.state === "error" ||
-      entry.state === "unknown" ||
-      entry.state === "stopped";
+    const outcome = entry.state === "error" || entry.state === "stopped";
     return stoppedAgent
       ? outcome && entry.agent === stoppedAgent
       : !outcome || !props.repliedAgents?.includes(entry.agent);
@@ -295,7 +292,7 @@ function MessageActivity(
   const primary = bubble[0];
   if (!primary) return null;
   const compact = bubble.every((entry) =>
-    ["error", "unknown", "stopped"].includes(entry.state),
+    ["error", "stopped"].includes(entry.state),
   );
   return (
     <section
@@ -482,7 +479,6 @@ function ActivityBubble({
   const waiting = entries.some(starting);
   const stepping = entries.some((entry) => entry.working && !starting(entry));
 
-  const unknown = entries.some((entry) => entry.state === "unknown");
   const failedCount = entries.filter((entry) => entry.state === "error").length;
   const label = (entry: Entry) =>
     entry.lifecycle
@@ -542,7 +538,6 @@ function ActivityBubble({
               state={stepping ? "working" : "waiting"}
             />
           )}
-          {unknown && <span>Status unavailable</span>}
           {entries
             .filter((entry) => entry.state === "stopped")
             .map((entry) => (

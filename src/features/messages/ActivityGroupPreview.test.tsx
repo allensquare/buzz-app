@@ -132,6 +132,68 @@ it("keeps a signed failure and its history in one disclosure through completion 
   }
 });
 
+it("keeps a signed failure authoritative when telemetry is uncertain and leaves passive history neutral", () => {
+  const f = fixture();
+  const request = "e".repeat(64);
+  const update = { ...step, threadRootId: request, replyParentId: request };
+  const { audience: _audience, ...publicStep } = update;
+  const failure: ChannelMessage = {
+    ...publicStep,
+    id: "failure",
+    createdAt: 101,
+    notice: "execution-failure",
+    content: "The selected model could not complete this request.",
+  };
+  const snapshot = {
+    ...f.activity.snapshot(),
+    turns: [
+      {
+        agent: "agent",
+        turnId: "turn",
+        channelId: "channel",
+        timestamp: 0,
+        state: "unknown" as const,
+        triggeringEventIds: [request],
+        threadRootId: request,
+      },
+    ],
+  };
+  try {
+    const quiet = activityPresentation(
+      [update],
+      snapshot,
+      new Set(["agent"]),
+      request,
+    ).groups[0];
+    expect(quiet?.outcomes).toEqual([]);
+    const group = activityPresentation(
+      [update, failure],
+      snapshot,
+      new Set(["agent"]),
+      request,
+    ).groups[0];
+    if (!group) throw new Error("Missing signed failure group");
+    expect(group.outcomes).toEqual([
+      { agent: "agent", state: "error", reason: failure.content },
+    ]);
+    render(
+      <ActivityGroupPreview
+        group={group}
+        profiles={new Map()}
+        media={() => undefined}
+        expanded
+        onToggle={() => {}}
+        renderHistory={(row) => <p>{row.content}</p>}
+      />,
+    );
+    expect(screen.getByText("Couldn’t finish")).toBeVisible();
+    expect(screen.queryByText("Status unavailable")).toBeNull();
+    expect(screen.getByText(failure.content)).toBeVisible();
+  } finally {
+    f.dispose();
+  }
+});
+
 it("shows failed and stopped participants independently without attributing sibling work", () => {
   const f = fixture();
   const rows = [step, { ...step, id: "helper-step", authorId: "helper" }];

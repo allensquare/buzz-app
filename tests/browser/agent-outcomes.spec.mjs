@@ -1,5 +1,6 @@
 import { test, expect } from "./fixture.mjs";
 import { open, settle } from "./timeline.mjs";
+import { pauseClock } from "./clock.mjs";
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools";
 
 test.use({
@@ -14,7 +15,8 @@ test.use({
 test("a remote failure shares its expandable history and preserves its message anchor", async ({
   page,
   app,
-}, testInfo) => {
+}) => {
+  await page.clock.install();
   const key = generateSecretKey();
   const agent = getPublicKey(key);
   app.serveProfile(key, { name: "Remote tester", is_agent: true });
@@ -51,11 +53,33 @@ test("a remote failure shares its expandable history and preserves its message a
   await expect(
     history.getByRole("button", { name: /View agent activity:/ }),
   ).toBeVisible();
+  await pauseClock(page);
+  await page.clock.runFor(31000);
+  await expect(
+    history.getByRole("button", { name: /View agent activity:/ }),
+  ).toHaveCount(0);
+  await expect(
+    history.getByText("Status unavailable", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    history.getByText("Couldn’t finish", { exact: true }),
+  ).toHaveCount(0);
+  // Freeze wall time after freshness expires: later monotonic advancement must
+  // not push signed read-state events beyond the broker's allowed clock skew.
+  await page.clock.setFixedTime(await page.evaluate(() => Date.now()));
   send("turn_completed", 2, { outcome: "failed" });
   let toggle = history.getByRole("button", {
     name: /^(Show|Collapse) activity history:/,
   });
   await expect(toggle).toContainText("Couldn’t finish");
+  // The task failed without publishing a reply: retiring live progress must
+  // leave a persistent explanation, even beyond the former preview timeout.
+  await page.clock.runFor(120000);
+  await expect(toggle).toContainText("Couldn’t finish");
+  await expect(
+    history.locator('[data-message-activity] [data-state="working"]'),
+  ).toHaveCount(0);
+  await page.clock.resume();
   await toggle.focus();
   await page.keyboard.press("Enter");
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -108,6 +132,10 @@ test("a remote failure shares its expandable history and preserves its message a
     await page.emulateMedia({ colorScheme });
     for (const width of [800, 1440]) {
       await page.setViewportSize({ width, height: 950 });
+      await page.evaluate((width) => {
+        document.documentElement.style.fontSize =
+          width === 800 ? "20px" : "16px";
+      }, width);
       await toggle.focus();
       await page.keyboard.press("Enter");
       await expect(toggle).toBeFocused();
@@ -120,37 +148,17 @@ test("a remote failure shares its expandable history and preserves its message a
       await expect(
         group.getByRole("button", { name: "View transcript" }),
       ).toBeVisible();
+      const collapseBox = await toggle.boundingBox();
+      const outcomeBox = await group
+        .getByText("Couldn’t finish", { exact: true })
+        .boundingBox();
+      expect(outcomeBox.y).toBeGreaterThanOrEqual(
+        collapseBox.y + collapseBox.height,
+      );
       const box = await group.boundingBox();
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(width);
       await settle(page);
-      if (colorScheme === "dark" && width === 1440) {
-        // Explicitly label the modeled state; these are built-product renders.
-        await page.evaluate(() => {
-          const label = document.createElement("div");
-          label.id = "outcome-capture-label";
-          label.textContent = "MOCKED STATE · built Buzz · outcome UI on #2454";
-          Object.assign(label.style, {
-            position: "fixed",
-            top: "4px",
-            right: "8px",
-            zIndex: "2147483647",
-            background: "#292b30",
-            color: "white",
-            padding: "6px",
-            font: "12px sans-serif",
-            pointerEvents: "none",
-          });
-          document.body.append(label);
-        });
-        const panel = thread;
-        await panel.screenshot({
-          path: testInfo.outputPath("mocked-outcome-expanded.png"),
-        });
-        await page.evaluate(() =>
-          document.getElementById("outcome-capture-label")?.remove(),
-        );
-      }
       await toggle.click();
       await expect(
         group.getByText(failure.content, { exact: true }),

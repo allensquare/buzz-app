@@ -145,8 +145,7 @@ function activityStatus(
     [...work, ...pending].map((entry) => [entry.agent, entry]),
   );
   const outcomes: ActivityPresentation["outcomes"] = [...known.values()].filter(
-    (entry) =>
-      !entry.dismissed && ["error", "unknown", "stopped"].includes(entry.state),
+    (entry) => !entry.dismissed && ["error", "stopped"].includes(entry.state),
   );
   // The signed failure message remains evidence after live lifecycle data expires.
   for (const row of group.history)
@@ -154,7 +153,7 @@ function activityStatus(
       row.notice === "execution-failure" &&
       !row.edited &&
       !row.attachments.length &&
-      !known.has(row.authorId)
+      (!known.has(row.authorId) || known.get(row.authorId)?.state === "unknown")
     )
       outcomes.push({
         agent: row.authorId,
