@@ -665,6 +665,7 @@ html[data-keyboard-navigation]
   .panelStack > [data-panel-resize] {
     display: none;
   }
+  /* useCoveredByDock treats position: absolute on the dock as covering. */
   .panelStack {
     --panel-motion-duration: var(--duration-panel-enter);
     --panel-motion-distance: 100%;
@@ -687,6 +688,7 @@ html[data-keyboard-navigation]
   .panelStack > [data-panel-resize] {
     display: none;
   }
+  /* useCoveredByDock treats position: absolute on the dock as covering. */
   .panelStack {
     --panel-motion-duration: var(--duration-panel-enter);
     --panel-motion-distance: 100%;
