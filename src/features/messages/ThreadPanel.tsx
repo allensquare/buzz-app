@@ -1,5 +1,6 @@
 // biome-ignore-all lint/a11y/noNoninteractiveTabindex: The thread region supports keyboard scrolling and Escape.
 import { AgentConnectionSetup } from "../agents/AgentConnectionSetup";
+import { TemporaryOutcomeExamples } from "./TemporaryOutcomeExamples";
 import { TypingIndicator, useLiveConversationAgents } from "./TypingIndicator";
 import { ActivityExpansion } from "./ActivityExpansion";
 import { ActivityGroupPreview } from "./ActivityGroupPreview";
@@ -1949,6 +1950,15 @@ function ThreadMessages({
               previousAuthor={joinsLive ? lastMessage?.authorId : undefined}
               openActivity={onOpenLink}
               canOpenActivity={canOpenLink}
+            />
+          )}
+          {!preview && !positioning && rootId && (
+            <TemporaryOutcomeExamples
+              key={`${channelId}:${rootId}`}
+              scope={`${scope}:${channelId}`}
+              profile={profiles.get(session.viewer ?? "")}
+              media={session.media}
+              side="thread"
             />
           )}
         </div>
