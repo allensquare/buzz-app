@@ -18,8 +18,14 @@ type ActivityRun = {
 export type ActivityPresentation = ActivityRun & {
   /** Retires the live treatment only; coordination history remains readable. */
   retired: boolean;
+  outcomes: Pick<
+    ReturnType<typeof requestWork>[number],
+    "agent" | "state" | "reason"
+  >[];
   /** Only the latest update run for an agent/request owns live work and Stop. */
   liveParticipants: string[];
+  /** Agents whose current work or outcome this group can actually present. */
+  presentedParticipants: string[];
   working: boolean;
   standalone: boolean;
 };
@@ -135,10 +141,27 @@ function activityStatus(
       .filter((entry) => entry.working)
       .map((entry) => entry.agent),
   );
-  return {
-    retired,
-    working,
-  };
+  const known = new Map(
+    [...work, ...pending].map((entry) => [entry.agent, entry]),
+  );
+  const outcomes: ActivityPresentation["outcomes"] = [...known.values()].filter(
+    (entry) =>
+      !entry.dismissed && ["error", "unknown", "stopped"].includes(entry.state),
+  );
+  // The signed failure message remains evidence after live lifecycle data expires.
+  for (const row of group.history)
+    if (
+      row.notice === "execution-failure" &&
+      !row.edited &&
+      !row.attachments.length &&
+      !known.has(row.authorId)
+    )
+      outcomes.push({
+        agent: row.authorId,
+        state: "error",
+        reason: row.content,
+      });
+  return { retired, working, outcomes };
 }
 
 /** Shared projection for timeline and thread; hosts own scrolling and disclosure state. */
@@ -215,7 +238,23 @@ export function activityPresentation(
   );
   const bubbleAnchors = new Set<string>();
   const byRow = new Map<string, ActivityRowPresentation>();
-  for (const history of activityRuns(rows, requests)) {
+  for (const run of activityRuns(rows, requests)) {
+    const end = run.at(-1);
+    const failure = end && following.get(end.id);
+    const history =
+      failure?.notice === "execution-failure" &&
+      !failure.edited &&
+      !failure.attachments.length &&
+      failure.replyParentId &&
+      end &&
+      run.some((row) => row.authorId === failure.authorId) &&
+      failure.channelId === end.channelId &&
+      failure.threadRootId === end.threadRootId &&
+      new Date(failure.createdAt * 1000).toDateString() ===
+        new Date(end.createdAt * 1000).toDateString() &&
+      requests.get(failure.id) === requests.get(end.id)
+        ? [...run, failure]
+        : run;
     const first = history[0];
     const latest = history.at(-1);
     if (!first || !latest) continue;
@@ -235,7 +274,7 @@ export function activityPresentation(
       requestId: requests.get(first.id) ?? first.threadRootId,
       followingMessage: following.get(latest.id),
     };
-    const { retired, working } = activityStatus(
+    const { retired, working, outcomes } = activityStatus(
       group,
       snapshot,
       agents,
@@ -271,6 +310,13 @@ export function activityPresentation(
       ...group,
       retired,
       liveParticipants,
+      outcomes: outcomes.filter((entry) =>
+        liveParticipants.includes(entry.agent),
+      ),
+      presentedParticipants: liveParticipants.filter(
+        (agent) =>
+          working.has(agent) || outcomes.some((entry) => entry.agent === agent),
+      ),
       working: liveParticipants.some((agent) => working.has(agent)),
       standalone,
     });

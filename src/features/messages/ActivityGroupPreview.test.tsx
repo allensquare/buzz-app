@@ -65,6 +65,174 @@ function fixture() {
     },
   };
 }
+it("keeps a signed failure and its history in one disclosure through completion and reload", () => {
+  const f = fixture();
+  const { audience: _audience, ...publicStep } = step;
+  const failure: ChannelMessage = {
+    ...publicStep,
+    id: "failure",
+    createdAt: 101,
+    notice: "execution-failure",
+    content: "The model could not process this image.",
+  };
+  const rows = [step, failure];
+  function Preview({ reloaded = false }: { reloaded?: boolean }) {
+    const [expanded, setExpanded] = useState(false);
+    const presentation = useActivityPresentation(
+      rows,
+      reloaded ? undefined : f.activity,
+      new Set(["agent"]),
+      "request",
+    );
+    const group = presentation.groups[0];
+    if (!group) throw new Error("Missing group");
+    return (
+      <ActivityGroupPreview
+        group={group}
+        profiles={new Map()}
+        media={() => undefined}
+        expanded={expanded}
+        onToggle={() => setExpanded((value) => !value)}
+        renderHistory={(row) => <p data-message-id={row.id}>{row.content}</p>}
+      />
+    );
+  }
+  try {
+    const work = f.local.begin({
+      scope: "test",
+      agent: "agent",
+      channelId: "channel",
+      messageId: "request",
+      threadRootId: "request",
+    });
+    work.started();
+    const view = render(<Preview />);
+    const toggle = screen.getByRole("button", {
+      name: /Show activity history/,
+    });
+    fireEvent.click(toggle);
+    act(() => work.finish({ ok: false, error: "Provider failed" }));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveFocus();
+    expect(screen.getAllByText(failure.content)).toHaveLength(1);
+    expect(screen.getByText(step.content)).toBeVisible();
+    expect(screen.getByText("Couldn’t finish")).toBeVisible();
+    expect(screen.queryByText("Provider failed")).toBeNull();
+    fireEvent.click(toggle);
+    view.rerender(<Preview reloaded />);
+    expect(screen.getByText("Couldn’t finish")).toBeVisible();
+    expect(screen.queryByText(failure.content)).toBeNull();
+    fireEvent.click(toggle);
+    expect(screen.getByText(failure.content)).toHaveAttribute(
+      "data-message-id",
+      "failure",
+    );
+  } finally {
+    f.dispose();
+  }
+});
+
+it("shows failed and stopped participants independently without attributing sibling work", () => {
+  const f = fixture();
+  const rows = [step, { ...step, id: "helper-step", authorId: "helper" }];
+  try {
+    f.local
+      .begin({
+        scope: "test",
+        agent: "agent",
+        channelId: "channel",
+        messageId: "request",
+        threadRootId: "request",
+      })
+      .finish({ ok: false, error: "Unavailable" });
+    f.local
+      .begin({
+        scope: "test",
+        agent: "helper",
+        channelId: "channel",
+        messageId: "request",
+        threadRootId: "request",
+      })
+      .finish({ ok: true, stopped: true });
+    f.local
+      .begin({
+        scope: "test",
+        agent: "agent",
+        channelId: "channel",
+        messageId: "sibling",
+        threadRootId: "request",
+      })
+      .started();
+    const group = activityPresentation(
+      rows,
+      f.activity.snapshot(),
+      new Set(["agent", "helper"]),
+      "request",
+    ).groups[0];
+    if (!group) throw new Error("Missing group");
+    render(
+      <ActivityGroupPreview
+        group={group}
+        profiles={new Map()}
+        media={() => undefined}
+        expanded={false}
+        onToggle={() => {}}
+      />,
+    );
+    expect(screen.getByText("Couldn’t finish")).toBeVisible();
+    expect(screen.getByText("Stopped")).toBeVisible();
+    expect(screen.queryByText("Checking the layout")).toBeNull();
+    expect(group.working).toBe(false);
+    expect(group.ids).toEqual([step.id, "helper-step"]);
+  } finally {
+    f.dispose();
+  }
+});
+
+it.each([
+  "ordinary reply",
+  "unlinked",
+  "other author",
+  "other request",
+  "other thread",
+  "another day",
+  "edited",
+  "attachment",
+])("keeps %s outside the signed failure disclosure", (variant) => {
+  const { audience: _audience, ...publicStep } = step;
+  const failure: ChannelMessage = {
+    ...publicStep,
+    id: "failure",
+    createdAt: 101,
+    ...(variant === "ordinary reply"
+      ? {}
+      : { notice: "execution-failure" as const }),
+    ...(variant === "unlinked" ? { replyParentId: undefined } : {}),
+    ...(variant === "other author" ? { authorId: "outside" } : {}),
+    ...(variant === "other request" ? { replyParentId: "sibling" } : {}),
+    ...(variant === "other thread" ? { threadRootId: "sibling" } : {}),
+    ...(variant === "another day" ? { createdAt: 86501 } : {}),
+    ...(variant === "edited" ? { edited: true } : {}),
+    ...(variant === "attachment"
+      ? {
+          attachments: [
+            {
+              url: "https://relay.test/media/result.png",
+              kind: "image" as const,
+            },
+          ],
+        }
+      : {}),
+  };
+  const group = activityPresentation(
+    [step, failure],
+    undefined,
+    new Set(["agent"]),
+    "request",
+  ).groups[0];
+  expect(group?.ids).toEqual([step.id]);
+  expect(group?.outcomes).toEqual([]);
+});
 it("keeps a dispatch readable after its sender finishes, while the helper works and after reload", () => {
   const f = fixture();
   try {

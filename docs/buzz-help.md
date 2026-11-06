@@ -769,16 +769,18 @@ available rather than silently discarding it.
   and timer turns from before this version aren't listed, and **Search older
   sessions** doesn't find them, because it only matches channel conversations.
 - Failed requests show **Couldn’t finish**, cancelled requests **Stopped**, and
-  unconfirmed outcomes **Status unavailable**. Choose **Details** for status
-  information. For your remote agents, Buzz checks again automatically when no
-  final result is available yet, or after a temporary lookup failure, while you
-  stay signed in and connected. Requests sent to several agents keep each
-  agent's stopped outcome visible alongside another agent's failure.
-- Automatic failure replies appear below their request as a compact status line;
-  **Details** expands the explanation inline. Failures of channel requests also
-  appear in the channel.
-- For agents running on this device, **Details** can offer **Retry** to ask again
-  and **Dismiss** to hide the failure.
+  unconfirmed outcomes **Status unavailable** in the agent's activity bubble.
+  Expand the summary to read the explanation and recorded updates, view Activity,
+  or use supported recovery actions. **Collapse** keeps the outcome visible.
+  For your remote agents, Buzz checks again automatically when no final result is
+  available yet, or after a temporary lookup failure, while you stay signed in
+  and connected. Requests sent to several agents keep each agent's outcome visible.
+- Automatic failure explanations share the related activity history when linked
+  to the same request. Otherwise they have their own expandable outcome bubble.
+  Ordinary replies and partial results remain visible. Failures of channel
+  requests also appear in the channel.
+- For agents running on this device, expanded outcomes can offer **Retry** to ask
+  again and **Dismiss** to hide the failure.
 - Any agent running on this device can read and change some Buzz settings
   here when you ask it to: appearance mode, interface size, accent color,
   vibe level, where new threads open, Solo follow-up behavior, automatic

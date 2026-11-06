@@ -172,21 +172,27 @@ it("shows one bubble with one avatar per agent across multiple turns, removing o
     f.send(A, "a2", 1, "turn_started", { triggeringEventIds: [root] });
     f.send(B, "b1", 1, "turn_started", { triggeringEventIds: [root] });
     expect(
-      screen.getAllByRole("button", { name: /View agent activity/ }),
+      screen.getAllByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+      }),
     ).toHaveLength(1);
     expect(screen.getAllByTitle("Blossom")).toHaveLength(1);
     expect(screen.getAllByTitle("Bubbles")).toHaveLength(1);
     expect(view.container.querySelector(".buzz-avatar-status-dot")).toBeNull();
     f.send(A, "a1", 2, "turn_completed");
     expect(
-      screen.getByRole("button", { name: /View agent activity: Blossom/ }),
+      screen.getByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom/,
+      }),
     ).toBeInTheDocument();
     f.send(A, "a2", 2, "turn_completed");
     expect(
       screen.queryByRole("button", { name: /Blossom/ }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /View agent activity: Bubbles/ }),
+      screen.getByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history): Bubbles/,
+      }),
     ).toBeInTheDocument();
     f.send(B, "b1", 2, "turn_completed");
     expect(
@@ -222,13 +228,13 @@ it("keeps a stopped agent visible beside another agent's persistent failure", ()
     f.send(A, "failed", 2, "turn_completed", { outcome: "failed" });
     f.send(B, "stopped", 2, "turn_completed", { outcome: "cancelled" });
     expect(screen.getByText("Couldn’t finish")).toBeInTheDocument();
-    expect(screen.getByText("Bubbles · Stopped")).toBeInTheDocument();
+    expect(screen.getByText("Stopped")).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /View agent activity: Blossom, failed/,
+        name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom, failed/,
       }),
     );
-    expect(screen.getByText("Bubbles · Stopped")).toBeInTheDocument();
+    expect(screen.getByText("Stopped")).toBeInTheDocument();
     expect(
       screen.getByText(/This request ended before it could finish/),
     ).toBeInTheDocument();
@@ -259,15 +265,15 @@ it.each([
       if (outcome !== "cancelled") {
         fireEvent.click(
           screen.getByRole("button", {
-            name: /View agent activity: Blossom, failed/,
+            name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom, failed/,
           }),
         );
         expect(
           screen.getByText(/This request ended before it could finish/),
         ).toBeInTheDocument();
         expect(
-          screen.queryByRole("button", { name: "View activity for Blossom" }),
-        ).not.toBeInTheDocument();
+          screen.getByRole("button", { name: "View activity for Blossom" }),
+        ).toBeInTheDocument();
         expect(
           screen.queryByRole("button", { name: /Dismiss error/ }),
         ).not.toBeInTheDocument();
@@ -300,7 +306,9 @@ it.each(["payload", "prompt"])(
         },
       });
       expect(
-        screen.queryByRole("button", { name: /View agent activity/ }),
+        screen.queryByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+        }),
       ).not.toBeInTheDocument();
       for (let seq = 1; seq <= 150; seq++)
         f.send(B, "unrelated", seq, "acp_read");
@@ -308,16 +316,22 @@ it.each(["payload", "prompt"])(
       for (let seq = 151; seq <= 201; seq++)
         f.send(B, "unrelated", seq, "acp_read");
       expect(
-        screen.queryByRole("button", { name: /View agent activity/ }),
+        screen.queryByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+        }),
       ).not.toBeInTheDocument();
       for (let seq = 202; seq <= 402; seq++)
         f.send(B, "unrelated", seq, "acp_read");
       expect(
-        screen.queryByRole("button", { name: /View agent activity/ }),
+        screen.queryByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+        }),
       ).not.toBeInTheDocument();
       view.rerender(<ActivityAccessory {...f.props} messageLayout="thread" />);
       expect(
-        screen.getByRole("button", { name: /View agent activity: Blossom/ }),
+        screen.getByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom/,
+        }),
       ).toBeInTheDocument();
     } finally {
       view.unmount();
@@ -361,7 +375,9 @@ it("previews only live scoped actions and retains profile navigation", () => {
     f.send(A, "old", 3, "turn_completed");
     f.send(A, "new", 1, "turn_started", { triggeringEventIds: [root] });
     fireEvent.click(
-      screen.getByRole("button", { name: /View agent activity/ }),
+      screen.getByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+      }),
     );
     expect(
       screen.getByText("Waiting for activity details"),
@@ -383,15 +399,17 @@ it("previews only live scoped actions and retains profile navigation", () => {
     expect(claimProfileTranscript(activity)).toBeDefined();
     act(() => vi.advanceTimersByTime(31000));
     fireEvent.click(
-      screen.getByRole("button", { name: /View agent activity/ }),
+      screen.getByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+      }),
     );
     expect(
       screen.getByText(/Buzz couldn’t confirm whether this request finished/),
     ).toBeInTheDocument();
     expect(screen.queryByText("Current thought")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "View activity for Blossom" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "View activity for Blossom" }),
+    ).toBeInTheDocument();
   } finally {
     view.unmount();
     f.dispose();
@@ -403,7 +421,9 @@ it("removes the whole popup when access is revoked", () => {
   try {
     f.send(A, "a", 1, "turn_started", { triggeringEventIds: [root] });
     fireEvent.click(
-      screen.getByRole("button", { name: /View agent activity/ }),
+      screen.getByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+      }),
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     view.rerender(<ActivityAccessory {...f.props} canOpen={() => false} />);
@@ -440,7 +460,9 @@ it("makes the compact avatar and tool preview one action, retaining the popup wh
       },
     });
     fireEvent.click(
-      screen.getByRole("button", { name: /View agent activity/ }),
+      screen.getByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+      }),
     );
     const popup = within(
       screen.getByRole("dialog", { name: "Agent activity" }),
@@ -565,7 +587,7 @@ it("shows local receipt and failure without requiring an ACP transcript, and ope
     act(() => work.finish({ ok: false, error: "Provider unavailable" }));
     expect(screen.getByText("Couldn’t finish")).toBeInTheDocument();
     const details = screen.getByRole("button", {
-      name: /View agent activity: Blossom/,
+      name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom/,
     });
     expect(details.querySelector("[data-state]")).toBeNull();
     fireEvent.click(details);
@@ -606,8 +628,10 @@ it("dismisses only that agent's error on this message, without changing other wo
       begin(A, next).finish({ ok: false, error: "Elsewhere" });
       begin(B, root).step("Read", "notes.txt");
     });
-    const mixed = screen.getByRole("button", { name: /View agent activity/ });
-    expect(mixed).toHaveTextContent("1 failed");
+    const mixed = screen.getByRole("button", {
+      name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+    });
+    expect(mixed).toHaveTextContent("Couldn’t finish");
     const failedBadge = mixed.querySelector("[data-activity-failure]");
     const workingBadge = mixed.querySelector("[data-thread-working]");
     expect(
@@ -616,7 +640,9 @@ it("dismisses only that agent's error on this message, without changing other wo
     expect(failedBadge?.parentElement).toBe(workingBadge?.parentElement);
     expect(workingBadge).toHaveTextContent("Reading notes.txt");
     fireEvent.click(
-      screen.getByRole("button", { name: /View agent activity/ }),
+      screen.getByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+      }),
     );
     expect(
       screen.getByText("Provider unavailable after a long and detailed reason")
@@ -677,7 +703,9 @@ it.each([false, true])(
           .finish({ ok: false, error: "Provider unavailable" });
       });
       fireEvent.click(
-        screen.getByRole("button", { name: /View agent activity/ }),
+        screen.getByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+        }),
       );
       const dismiss = screen.getByRole("button", {
         name: "Dismiss error from Blossom",
@@ -743,7 +771,11 @@ it.each([false, true])(
       expect(screen.getByTitle("Bubbles")).toBeInTheDocument();
       expect(represented.get(next)).toBeUndefined();
       act(() =>
-        screen.getByRole("button", { name: /View agent activity/ }).focus(),
+        screen
+          .getByRole("button", {
+            name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+          })
+          .focus(),
       );
       f.send(B, "other", 2, "turn_completed");
       expect(screen.getByTitle("Blossom")).toBeInTheDocument();
@@ -770,12 +802,16 @@ it.each([false, true])(
 
 const settle = () => act(async () => {});
 const openBubble = () =>
-  fireEvent.click(screen.getByRole("button", { name: /View agent activity/ }));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+    }),
+  );
 const stopButton = () => screen.queryByRole("button", { name: "Stop Blossom" });
 // Reopen the popup, if anything closed it, to read the agent's row.
 const look = () => {
   const activity = screen.queryByRole("button", {
-    name: /View agent activity/,
+    name: /(?:View agent activity|Show activity history|Collapse activity history)/,
   });
   if (activity && !screen.queryByRole("dialog")) fireEvent.click(activity);
   return screen;
@@ -826,9 +862,14 @@ it.each(["waiting", "working"])(
         "success",
       );
       expect(
-        screen.queryByRole("button", { name: /View agent activity/ }),
+        screen.queryByRole("button", { name: "Stop Blossom" }),
       ).not.toBeInTheDocument();
-      expect(screen.getByText("Blossom · Stopped")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: /activity history: Blossom, Stopped/,
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Stopped")).toBeInTheDocument();
       // Handling the same message again replaces the note with its live work.
       act(() => {
         local
@@ -843,7 +884,9 @@ it.each(["waiting", "working"])(
       });
       expect(screen.queryByText(/Stopped/)).not.toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /View agent activity: Blossom/ }),
+        screen.getByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom/,
+        }),
       ).toBeInTheDocument();
     } finally {
       view.unmount();
@@ -875,7 +918,9 @@ it.each([
           .interruptible(async () => {});
       });
       expect(
-        screen.getByRole("button", { name: /View agent activity: Blossom/ }),
+        screen.getByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom/,
+        }),
       ).toBeInTheDocument();
       // Stop retains its exact request and response-side notice.
       await act(() => f.props.session.agentActivity.interrupt(A, "c", root));
@@ -884,7 +929,7 @@ it.each([
       ).not.toBeInTheDocument();
       // The note keeps the incoming message column instead of the list's edge.
       expect(
-        screen.getByText("Blossom · Stopped").closest("[data-layout]"),
+        screen.getByText("Stopped").closest("[data-layout]"),
       ).toHaveAttribute("data-layout", layout);
     } finally {
       view.unmount();
@@ -931,7 +976,7 @@ it("moves a stopped note below the agent's latest public reply", async () => {
     // Live work stays on its request; a reply does not take the bubble.
     expect(
       within(screen.getByTestId("request")).getByRole("button", {
-        name: /View agent activity: Blossom/,
+        name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom/,
       }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("reply")).toBeEmptyDOMElement();
@@ -946,7 +991,7 @@ it("moves a stopped note below the agent's latest public reply", async () => {
   }
 });
 it.each(["failed", "terminated", "unknown"])(
-  "places a remote %s caption beneath its reply without repeating the agent identity",
+  "places a remote %s outcome bubble beneath its reply",
   (outcome) => {
     const f = fixture();
     const reply = {
@@ -979,7 +1024,7 @@ it.each(["failed", "terminated", "unknown"])(
       f.send(A, "remote", 1, "turn_started", { triggeringEventIds: [root] });
       expect(
         within(screen.getByTestId("request")).getByRole("button", {
-          name: /View agent activity/,
+          name: /(?:View agent activity|Show activity history|Collapse activity history)/,
         }),
       ).toBeInTheDocument();
       expect(screen.getByTestId("reply")).toBeEmptyDOMElement();
@@ -992,16 +1037,16 @@ it.each(["failed", "terminated", "unknown"])(
           outcome === "unknown" ? "Status unavailable" : "Couldn’t finish",
         ),
       ).toBeInTheDocument();
-      expect(caption.queryByText("Blossom")).not.toBeInTheDocument();
+      expect(caption.getByText("Blossom")).toBeInTheDocument();
       expect(
         screen.getByTestId("reply").querySelector("[data-avatar-stack]"),
       ).toBeNull();
       fireEvent.click(
-        caption.getByRole("button", { name: /View agent activity/ }),
+        caption.getByRole("button", {
+          name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+        }),
       );
-      expect(
-        screen.getByRole("dialog", { name: "Agent activity" }),
-      ).toHaveTextContent(
+      expect(screen.getByTestId("reply")).toHaveTextContent(
         outcome === "unknown"
           ? "Buzz couldn’t confirm"
           : "This request ended before it could finish",
@@ -1133,7 +1178,7 @@ it("notes only stopped requests once their work settles", () => {
   }
 });
 
-it("hands focus back to the host when a focused Stop retires with its work", async () => {
+it("keeps focus on the outcome summary when a focused Stop retires", async () => {
   const local = createLocalAgentActivity();
   const f = fixture(local);
   const onFocusedRemoval = vi.fn();
@@ -1153,13 +1198,19 @@ it("hands focus back to the host when a focused Stop retires with its work", asy
         .interruptible(async () => {});
     });
     openBubble();
+    await act(async () => vi.advanceTimersToNextFrame());
     const stop = stopButton() as HTMLElement;
     act(() => stop.focus());
     fireEvent.click(stop);
     await settle();
     expect(stop.isConnected).toBe(false);
     await act(async () => vi.runAllTicks());
-    expect(onFocusedRemoval).toHaveBeenCalledOnce();
+    expect(onFocusedRemoval).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", {
+        name: /activity history: Blossom, Stopped/,
+      }),
+    ).toHaveFocus();
   } finally {
     view.unmount();
     f.dispose();
@@ -1364,7 +1415,9 @@ it("stops a hosted agent's turn through its provider in this thread", async () =
     );
     f.send(A, "t", 2, "turn_completed");
     expect(
-      screen.queryByRole("button", { name: /View agent activity/ }),
+      screen.queryByRole("button", {
+        name: /(?:View agent activity|Show activity history|Collapse activity history)/,
+      }),
     ).not.toBeInTheDocument();
   } finally {
     view.unmount();
@@ -2014,7 +2067,7 @@ it.each([
     };
     const hint = () => {
       const bubble = screen.getByRole("button", {
-        name: /View agent activity: Bubbles, remote, /,
+        name: /(?:View agent activity|Show activity history|Collapse activity history): Bubbles, remote, /,
       });
       const preview = bubble.closest("[data-agent-response-preview]");
       if (!(preview instanceof HTMLElement)) throw new Error("Missing preview");
@@ -2032,7 +2085,7 @@ it.each([
       await act(async () => {
         fireEvent.click(
           screen.getByRole("button", {
-            name: /View agent activity: Bubbles, remote, /,
+            name: /(?:View agent activity|Show activity history|Collapse activity history): Bubbles, remote, /,
           }),
         );
         vi.advanceTimersToNextFrame();
@@ -2073,7 +2126,7 @@ it.each([
         },
       });
       const local = screen.getByRole("button", {
-        name: /View agent activity: Blossom/,
+        name: /(?:View agent activity|Show activity history|Collapse activity history): Blossom/,
       });
       expect(local).not.toHaveAccessibleName(/remote/);
       expect(within(local).queryByText("Remote")).not.toBeInTheDocument();
