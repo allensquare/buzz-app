@@ -13,8 +13,8 @@ headphone action says **Talk with [agent]** and adds the agent to the Huddle
 automatically. Protected agents and agents without a local voice runtime do not
 offer this action. Group conversations still use **Add someone**.
 
-While an agent thinks, its portrait becomes 20% smaller with a rotating faded
-ring, and the mini player shows the same activity dots as DMs. Speaking restores
+While you speak, your listening Codex agent becomes 20% smaller. While it
+thinks, it stays smaller and adds a rotating faded ring, and the mini player shows the same activity dots as DMs. Speaking restores
 the normal portrait and speaking halo. Thinking and listening have no visible text captions; accessible avatar labels
 still describe the state. Reduced motion keeps the thinking ring static.
 

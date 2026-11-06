@@ -23,7 +23,8 @@ the parent conversation alone is insufficient. Several agents can participate.
 Starting a Huddle in an eligible one-to-one DM with your running Codex agent
 automatically adds it to the Huddle room. You can also add agents through the
 Huddle's member controls. On the hosting computer, a working Codex agent shows
-a smaller avatar with a rotating ring and activity dots in the compact player;
+a smaller avatar while you speak, then a rotating ring while it works, with
+activity dots in the compact player;
 speaking restores its normal size. This work state is not shared with remote
 participants. The agent’s own client enforces who it hears. Each filters for audio from your connected devices
 and speaks to everyone. The current audio protocol can briefly misattribute delayed

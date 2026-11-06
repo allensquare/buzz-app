@@ -423,7 +423,19 @@ let releaseLayout = () => {};
 let fixedWindow = false;
 const windowListeners = new Set<() => void>();
 const setWindowView = (view: HuddleView | null) => {
-  windowView = view;
+  windowView = view && {
+    ...view,
+    participants: view.participants.map((person) => ({
+      ...person,
+      // Simulate the locally hosted Codex seat for this presentation fixture.
+      attending:
+        person.key === peer &&
+        !view.muted &&
+        !!view.participants.find(
+          (participant) => participant.own && participant.level > 0,
+        ),
+    })),
+  };
   for (const listener of windowListeners) listener();
 };
 let windowAction = (
@@ -756,6 +768,24 @@ function Fixture() {
         )}
         {call.phase === "connected" && (
           <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                let frames = 0;
+                const speech = setInterval(() => {
+                  if (
+                    huddles.snapshot().phase !== "connected" ||
+                    frames++ >= 40
+                  ) {
+                    clearInterval(speech);
+                    return;
+                  }
+                  window.huddleFixture.speak(viewer, 0.08);
+                }, 100);
+              }}
+            >
+              Simulate you speaking
+            </Button>
             <Button
               variant="ghost"
               onClick={() => {

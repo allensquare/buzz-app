@@ -363,6 +363,7 @@ function Bubble({
 }) {
   const level = muted ? 0 : Math.max(0, Math.min(1, person.level));
   const thinking = !!person.thinking && level === 0;
+  const quiet = (thinking || person.attending) && level === 0;
   const label = `${person.name}${person.own ? (muted ? " (you, muted)" : " (you)") : ""}${level > 0 ? ", speaking" : ""}${thinking ? ", thinking" : ""}${person.listening ? ", listening to you" : ""}`;
   return (
     <HuddleAvatarToss stage={stage}>
@@ -371,7 +372,7 @@ function Bubble({
         data-thinking={thinking || undefined}
         style={
           {
-            "--voice-scale": thinking ? 0.8 : 1 + Math.min(level, 0.6) * 0.06,
+            "--voice-scale": quiet ? 0.8 : 1 + Math.min(level, 0.6) * 0.06,
           } as CSSProperties
         }
       >
