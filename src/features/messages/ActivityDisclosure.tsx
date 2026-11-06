@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject, Ref } from "react";
+import { Children, type ReactNode, type RefObject, type Ref } from "react";
 import { Avatar } from "../../shared/design-system/ui/Avatar";
 import { CaretUpIcon } from "../../shared/design-system/icons";
 import styles from "./Messages.module.css";
@@ -81,7 +81,6 @@ export function ActivityDisclosure({
               <span className={styles.audiencePreviewText}>
                 {expanded ? "Collapse" : summary}
               </span>
-              {expanded && expandedSummary}
             </button>
           </div>
         </div>
@@ -92,6 +91,11 @@ export function ActivityDisclosure({
           className={styles.containedActivityHistory}
           data-activity-details=""
         >
+          {Children.toArray(expandedSummary).length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {expandedSummary}
+            </div>
+          )}
           {children}
         </div>
       )}
