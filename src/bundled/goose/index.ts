@@ -115,6 +115,7 @@ export const apply: PluginModule["apply"] = (ctx) => {
     Create,
     CreateModel,
     CreateThinking,
+    createModelReportsReadiness: true,
     provider: {
       snapshot: setup.snapshot,
       subscribe: setup.subscribe,
