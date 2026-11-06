@@ -780,7 +780,10 @@ function Fixture() {
                     clearInterval(speech);
                     return;
                   }
-                  window.huddleFixture.speak(viewer, 0.08);
+                  window.huddleFixture.speak(
+                    viewer,
+                    0.035 + Math.abs(Math.sin(frames / 3)) * 0.08,
+                  );
                 }, 100);
               }}
             >

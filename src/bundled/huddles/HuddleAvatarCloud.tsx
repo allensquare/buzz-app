@@ -323,7 +323,12 @@ export function HuddleAvatarCloud({
               data-name-active={activeKey === person.key}
               {...nameInteraction(person.key)}
             >
-              <Bubble person={person} muted={false} stage={stage} />
+              <Bubble
+                person={person}
+                muted={false}
+                stage={stage}
+                listeningLevel={muted ? 0 : (self?.level ?? 0)}
+              />
             </div>
           ))}
           {hidden > 0 && (
@@ -356,14 +361,18 @@ function Bubble({
   person,
   muted,
   stage,
+  listeningLevel = 0,
 }: {
   person: Person;
   muted: boolean;
+  listeningLevel?: number;
   stage: RefObject<HTMLElement | null>;
 }) {
   const level = muted ? 0 : Math.max(0, Math.min(1, person.level));
   const thinking = !!person.thinking && level === 0;
   const quiet = (thinking || person.attending) && level === 0;
+  const listeningScale =
+    0.8 * (1 - (Math.min(0.6, Math.max(0, listeningLevel)) / 0.6) * 0.05);
   const label = `${person.name}${person.own ? (muted ? " (you, muted)" : " (you)") : ""}${level > 0 ? ", speaking" : ""}${thinking ? ", thinking" : ""}${person.listening ? ", listening to you" : ""}`;
   return (
     <HuddleAvatarToss stage={stage}>
@@ -372,7 +381,11 @@ function Bubble({
         data-thinking={thinking || undefined}
         style={
           {
-            "--voice-scale": quiet ? 0.8 : 1 + Math.min(level, 0.6) * 0.06,
+            "--voice-scale": quiet
+              ? thinking
+                ? 0.8
+                : listeningScale
+              : 1 + Math.min(level, 0.6) * 0.06,
           } as CSSProperties
         }
       >
