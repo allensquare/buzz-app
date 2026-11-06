@@ -1666,7 +1666,12 @@ export const MessageRow = memo(function AudienceMessageRow(
       !row.edited &&
       !row.attachments.length ? (
         props.recordedActivity?.container === "history" ? (
-          <FullMessageRow {...props} />
+          <FullMessageRow
+            {...props}
+            {...(props.recordedActivity.showAuthor
+              ? { stackPrevious: false, stackNext: false }
+              : {})}
+          />
         ) : (
           <AgentsMessageRow {...props} failure />
         )

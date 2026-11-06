@@ -35,6 +35,8 @@ export type ActivityRowPresentation = {
   requestId: string | undefined;
   active: boolean;
   ownsLive: boolean;
+  /** Keep a failure's author visible in history shared with other agents. */
+  showAuthor?: boolean;
   container: "history" | "bubble" | "standalone";
 };
 const noSubscribe = () => () => {};
@@ -305,6 +307,8 @@ export function activityPresentation(
           !retired &&
           (working.has(row.authorId) || !group.followingMessage),
         container: row.id === first.id && standalone ? "standalone" : "bubble",
+        showAuthor:
+          participants.length > 1 && row.notice === "execution-failure",
       });
     }
     groups.push({
@@ -378,6 +382,7 @@ export function useStableRowActivity() {
           prior.requestId === next.requestId &&
           prior.active === next.active &&
           prior.ownsLive === next.ownsLive &&
+          prior.showAuthor === next.showAuthor &&
           prior.container === container
         )
           return prior;

@@ -8,6 +8,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -22,6 +23,7 @@ import { ActivityGroupActions } from "./ActivityGroupActions";
 import {
   activityPresentation,
   useActivityPresentation,
+  useStableRowActivity,
 } from "./activity-presentation";
 import { MessageRow } from "./MessageRow";
 
@@ -131,6 +133,87 @@ it("keeps a signed failure and its history in one disclosure through completion 
     f.dispose();
   }
 });
+
+it.each(["timeline", "thread"] as const)(
+  "attributes an expanded failure to its author in multi-participant %s history",
+  (layout) => {
+    const { audience: _audience, ...publicStep } = step;
+    const helper = {
+      ...step,
+      id: "helper-step",
+      authorId: "helper",
+      content: "Helper reading files",
+      createdAt: 101,
+    };
+    const failure: ChannelMessage = {
+      ...publicStep,
+      id: "failure",
+      notice: "execution-failure",
+      content: "Provider unavailable",
+      createdAt: 102,
+    };
+    const profiles = new Map([
+      ["agent", { name: "Agent", isAgent: true as const }],
+      ["helper", { name: "Helper", isAgent: true as const }],
+    ]);
+    function Preview({ multiple }: { multiple: boolean }) {
+      const rows = multiple ? [step, helper, failure] : [step, failure];
+      const presentation = activityPresentation(
+        rows,
+        undefined,
+        new Set(profiles.keys()),
+      );
+      const stable = useStableRowActivity();
+      const group = presentation.groups[0];
+      if (!group) throw new Error("Missing group");
+      return (
+        <ActivityGroupPreview
+          group={group}
+          profiles={profiles}
+          media={() => undefined}
+          layout={layout}
+          expanded
+          onToggle={() => {}}
+          renderHistory={(row) => (
+            <MessageRow
+              row={row}
+              recordedActivity={stable.activity(
+                row.id,
+                presentation.byRow.get(row.id),
+                "history",
+              )}
+              profile={profiles.get(row.authorId)}
+              layout={layout}
+              stackPrevious
+              stackNext
+              media={() => undefined}
+              onOpenLink={() => false}
+              day={false}
+              retry={undefined}
+            />
+          )}
+        />
+      );
+    }
+    const view = render(<Preview multiple />);
+    const author = () => {
+      const row = screen
+        .getByText(failure.content)
+        .closest("[data-message-id]");
+      if (!row) throw new Error("Missing failure row");
+      return within(row as HTMLElement).getByText("Agent", {
+        selector: "strong",
+      });
+    };
+    expect(author().closest(".sr-only")).toBeNull();
+    expect(author().closest("[data-stack-previous]")).toBeNull();
+    expect(author().closest("[data-stack-next]")).toBeNull();
+    view.rerender(<Preview multiple={false} />);
+    expect(author().closest(".sr-only")).not.toBeNull();
+    view.rerender(<Preview multiple />);
+    expect(author().closest(".sr-only")).toBeNull();
+  },
+);
 
 it("keeps a signed failure authoritative when telemetry is uncertain and leaves passive history neutral", () => {
   const f = fixture();
