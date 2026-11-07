@@ -1619,8 +1619,9 @@
 
   /* Quiet parts are transparent while hidden. Quiet actions also give up
      their content width, like a hidden auto layout child, so the label takes
-     that space until they appear. They stay focusable: keyboard focus is one
-     of the states that reveals them. */
+     that space until they appear. They stay focusable, and a focused quiet
+     part always shows, however focus got there: a dialog closed with the
+     mouse returns focus to its trigger without the keyboard flag. */
   .navigation-section-heading [data-navigation-reveal] {
     opacity: 0;
   }
@@ -1633,6 +1634,7 @@
   :is(
       .navigation-section-heading:hover,
       html[data-keyboard-navigation] .navigation-section-heading:focus-within,
+      .navigation-section-heading:has([data-navigation-reveal]:focus-within),
       .navigation-section-heading:has(
         [aria-expanded="true"][aria-haspopup="menu"]
       ),

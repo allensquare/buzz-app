@@ -33,7 +33,8 @@ export function NavigationSection({
  * own disclosure trigger, which keeps the row's inset as its hit area and
  * focus ring. Quiet parts, `revealActions` or any descendant marked
  * `data-navigation-reveal` such as a chevron, appear on hover, keyboard focus,
- * or while a menu from the heading is open, and always on touch. Hidden
+ * while a menu from the heading is open or one of them has focus, and always
+ * on touch. Hidden
  * actions take no width, so the label uses that space until they appear.
  */
 export function NavigationSectionHeading({
