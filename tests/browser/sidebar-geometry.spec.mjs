@@ -425,10 +425,6 @@ test("every sidebar tab fills its rows and keeps heading actions in their row at
   await field.fill("Work");
   await dialog.getByRole("button", { name: "Create and move" }).click();
   await expect(dialog).not.toBeVisible();
-  // Without its heading, Solo leaves creation to New beside the tabs.
-  await expect(
-    page.getByRole("button", { name: "New chat or workspace" }),
-  ).toHaveCount(0);
 
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
   const layout = () =>
@@ -604,6 +600,41 @@ test("every sidebar tab fills its rows and keeps heading actions in their row at
     // Solo starts its list exactly where Team does.
     expect(starts.Solo, limit).toBe(starts.Team);
   }
+
+  // No heading control is ever invisible: hovering any heading reveals every
+  // button in it, so nothing clickable or focusable hides behind a rule that
+  // can never switch on.
+  for (const tab of ["All", "Team", "Solo"]) {
+    await page.getByRole("tab", { name: tab, exact: true }).click();
+    // Headings leave creation to New beside the tabs.
+    await expect(
+      sidebar.getByRole("button", { name: "New chat or workspace" }),
+    ).toHaveCount(0);
+    const headings = sidebar.locator(".navigation-section-heading");
+    for (let index = 0; index < (await headings.count()); index += 1) {
+      const heading = headings.nth(index);
+      if (!(await heading.isVisible())) continue;
+      await heading.hover();
+      await expect
+        .poll(
+          () =>
+            heading.evaluate((row) =>
+              [...row.querySelectorAll("button")]
+                .filter((button) => button.getClientRects().length)
+                .filter((button) => {
+                  let opacity = 1;
+                  for (let node = button; node; node = node.parentElement)
+                    opacity *= parseFloat(getComputedStyle(node).opacity);
+                  return opacity < 1;
+                })
+                .map((button) => button.getAttribute("aria-label")),
+            ),
+          { message: `${tab} heading ${index} hides a control` },
+        )
+        .toEqual([]);
+    }
+  }
+  await page.getByRole("tab", { name: "Solo", exact: true }).click();
 
   // A workspace's actions reveal on hover, centered on its own heading.
   const nav = page.getByRole("navigation", { name: "Solo conversations" });

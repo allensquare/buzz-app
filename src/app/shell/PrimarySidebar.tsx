@@ -307,14 +307,7 @@ function ScopedSidebar({
                       target={props.target}
                       chatIcons={props.chatIcons}
                       chatMenus={props.chatMenus}
-                      renderContents={(
-                        ordinary,
-                        ordinaryActions,
-                        header,
-                        creationTrigger,
-                        pendingClick,
-                        headerActions,
-                      ) => (
+                      renderContents={(ordinary, header, pendingClick) => (
                         <SoloRegions
                           key={`regions:${scope}:${connection.generation}`}
                           session={connection.session}
@@ -323,8 +316,6 @@ function ScopedSidebar({
                           target={props.target}
                           sidebar={sidebar}
                           ordinary={ordinary}
-                          ordinaryActions={ordinaryActions}
-                          creationTrigger={creationTrigger}
                           pendingClick={pendingClick}
                           groupDisclosure={
                             filter === "all"
@@ -339,7 +330,6 @@ function ScopedSidebar({
                               : undefined
                           }
                           hidePrimaryHeading={filter === "solo"}
-                          fallbackHeaderActions={headerActions}
                           fallback={
                             <>
                               {header}

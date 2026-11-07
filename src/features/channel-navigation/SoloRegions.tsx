@@ -35,7 +35,6 @@ import {
   MenuRadioItem,
   MenuGroup,
   MenuGroupLabel,
-  MenuSeparator,
 } from "../../shared/design-system/ui/Menu";
 import type { Navigation } from "../navigation/controller";
 import type { OpenTarget } from "../navigation/targets";
@@ -59,10 +58,7 @@ export function SoloRegions({
   sidebar,
   scope,
   ordinary,
-  ordinaryActions,
-  creationTrigger,
   fallback,
-  fallbackHeaderActions,
   groupDisclosure,
   hidePrimaryHeading = false,
   pendingClick: sharedPendingClick,
@@ -73,10 +69,7 @@ export function SoloRegions({
   scope: string;
   sidebar: ReturnType<typeof useSidebarView>;
   ordinary?: ReactNode;
-  ordinaryActions?: ReactNode;
-  creationTrigger?: RefObject<HTMLButtonElement | null> | undefined;
   fallback?: ReactNode;
-  fallbackHeaderActions?: ReactNode;
   hidePrimaryHeading?: boolean;
   groupDisclosure?:
     | {
@@ -143,7 +136,6 @@ export function SoloRegions({
       onToggle={groupDisclosure.onToggle}
       hideMoreActions
       persistentChevron
-      headerActions={fallbackHeaderActions}
     >
       {ordinary}
     </SidebarSection>
@@ -186,8 +178,6 @@ export function SoloRegions({
             first={index === 0}
             last={index === regions.length - 1}
             ordinary={index === primary ? ordinary : undefined}
-            ordinaryActions={index === primary ? ordinaryActions : undefined}
-            creationTrigger={index === primary ? creationTrigger : undefined}
             groupDisclosure={index === primary ? groupDisclosure : undefined}
             groupSectionKey={groupDisclosure?.sectionKey}
             hideHeading={hidePrimaryHeading && index === primary}
@@ -211,8 +201,6 @@ function RegionFrame({
   first,
   last,
   ordinary,
-  ordinaryActions,
-  creationTrigger,
   groupDisclosure,
   groupSectionKey,
   hideHeading,
@@ -230,8 +218,6 @@ function RegionFrame({
   first: boolean;
   last: boolean;
   ordinary?: ReactNode;
-  ordinaryActions?: ReactNode;
-  creationTrigger?: RefObject<HTMLButtonElement | null> | undefined;
   groupDisclosure?:
     | {
         sectionKey: string;
@@ -398,6 +384,8 @@ function RegionFrame({
       ))}
     </>
   );
+  // The region's own create action trails its other actions.
+  const create = actions.find((action) => action.icon === "plus");
   const headerActions = (
     <>
       {actions
@@ -405,23 +393,7 @@ function RegionFrame({
         .map((action) => (
           <RegionAction key={action.id} action={action} run={run} />
         ))}
-      {(actions.some((action) => action.icon === "plus") ||
-        ordinaryActions) && (
-        <RegionAction
-          action={
-            actions.find((action) => action.icon === "plus") ?? {
-              id: "create",
-              label: "Create",
-              icon: "plus",
-              onSelect() {},
-              menu: () => [],
-            }
-          }
-          run={run}
-          extraItems={ordinaryActions}
-          triggerRef={creationTrigger}
-        />
-      )}
+      {create && <RegionAction action={create} run={run} />}
     </>
   );
   const headerNotice = actionError && (
@@ -457,7 +429,7 @@ function RegionFrame({
       )}
     </>
   );
-  const hasActions = actions.length > 0 || !!ordinaryActions;
+  const hasActions = actions.length > 0;
   return (
     <RegionDestinationContext.Provider
       value={{
@@ -515,17 +487,12 @@ function RegionFrame({
 function RegionAction({
   action,
   run,
-  extraItems,
-  triggerRef,
 }: {
   action: SoloRegionAction;
-  extraItems?: ReactNode;
-  triggerRef?: RefObject<HTMLButtonElement | null> | undefined;
   run(action: Pick<SoloRegionAction, "onSelect">): Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
-  const localTrigger = useRef<HTMLButtonElement>(null);
-  const anchor = triggerRef ?? localTrigger;
+  const anchor = useRef<HTMLButtonElement>(null);
   const afterClose = useRef<Pick<SoloRegionAction, "onSelect"> | undefined>(
     undefined,
   );
@@ -545,8 +512,7 @@ function RegionAction({
           typeof item.onSelect === "function",
       );
   } catch {
-    if (!extraItems) return null;
-    items = [];
+    return null;
   }
   const icon =
     action.icon === "plus" ? (
@@ -565,7 +531,7 @@ function RegionAction({
       title={action.label}
     />
   );
-  if (!items && !extraItems)
+  if (!items)
     return (
       <IconButton
         size="compact"
@@ -576,7 +542,7 @@ function RegionAction({
       />
     );
   items ??= [{ id: action.id, label: action.label, onSelect: action.onSelect }];
-  if (!items.length && !extraItems) return null;
+  if (!items.length) return null;
   const groups = [...new Set(items.map((item) => item.group ?? ""))];
   return (
     <MenuRoot
@@ -629,8 +595,6 @@ function RegionAction({
             </MenuGroup>
           );
         })}
-        {!!items.length && extraItems && <MenuSeparator />}
-        {extraItems}
       </MenuPopup>
     </MenuRoot>
   );
