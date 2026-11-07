@@ -19,11 +19,6 @@ thinks, it stays smaller and adds a rotating faded ring, and the mini player sho
 the normal portrait and speaking halo. Thinking and listening have no visible text captions; accessible avatar labels
 still describe the state. Reduced motion keeps the thinking ring static.
 
-For a simulated presentation preview, run `bin/pnpm dev` and open
-`/tests/fixtures/huddles.html?chrome`. Join the fixture Huddle, then use
-**Toggle agent thinking** and **Simulate Alex speaking**. This preview uses the
-real components without connecting to a relay or microphone.
-
 Thinking animations are supplied only by Codex voice seats, for both automatic
 DM invitations and manually added huddle members. Adding an agent to the parent
 conversation alone does not add it to the separate Huddle room. Voice currently
