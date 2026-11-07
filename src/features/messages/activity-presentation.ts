@@ -173,6 +173,7 @@ export function activityPresentation(
   snapshot: Snapshot | undefined,
   agents: ReadonlySet<string> | undefined,
   rootId?: string,
+  canAbsorbFailure: (failure: ChannelMessage) => boolean = () => true,
 ) {
   const following = new Map(
     rows.map((row, index) => [row.id, rows[index + 1]]),
@@ -249,6 +250,7 @@ export function activityPresentation(
       !failure.edited &&
       !failure.attachments.length &&
       failure.replyParentId &&
+      canAbsorbFailure(failure) &&
       end &&
       run.some((row) => row.authorId === failure.authorId) &&
       failure.channelId === end.channelId &&
