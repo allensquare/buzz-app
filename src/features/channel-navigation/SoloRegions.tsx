@@ -15,6 +15,7 @@ import {
   type RefObject,
 } from "react";
 import { OwnedContribution } from "../../plugins/OwnedContribution";
+import { NavigationSectionHeading } from "../../shared/design-system/ui/NavigationSection";
 import { SidebarSection } from "../../bundled/channels/SidebarSection";
 import styles from "../../bundled/channels/Channels.module.css";
 import { orderContributedSidebarSections } from "../../bundled/channels/sidebar-sections";
@@ -147,15 +148,8 @@ export function SoloRegions({
       {ordinary}
     </SidebarSection>
   ) : hidePrimaryHeading ? (
-    <SidebarSection
-      sectionKey="scope:solo"
-      title="Solo"
-      open
-      onToggle={() => {}}
-      hideTitle
-    >
-      {ordinary}
-    </SidebarSection>
+    // Like Team, the Solo tab names its list, so the rows sit directly in it.
+    (ordinary ?? null)
   ) : (
     (fallback ?? null)
   );
@@ -404,6 +398,66 @@ function RegionFrame({
       ))}
     </>
   );
+  const headerActions = (
+    <>
+      {actions
+        .filter((action) => action.icon !== "plus")
+        .map((action) => (
+          <RegionAction key={action.id} action={action} run={run} />
+        ))}
+      {(actions.some((action) => action.icon === "plus") ||
+        ordinaryActions) && (
+        <RegionAction
+          action={
+            actions.find((action) => action.icon === "plus") ?? {
+              id: "create",
+              label: "Create",
+              icon: "plus",
+              onSelect() {},
+              menu: () => [],
+            }
+          }
+          run={run}
+          extraItems={ordinaryActions}
+          triggerRef={creationTrigger}
+        />
+      )}
+    </>
+  );
+  const headerNotice = actionError && (
+    <p className={styles.contributionFeedback} role="alert">
+      The action could not run.
+    </p>
+  );
+  const body = (
+    <>
+      {source &&
+      binding &&
+      presentation &&
+      region.snapshot?.status === "ready" &&
+      !region.reason ? (
+        <OwnedContribution
+          entry={source}
+          registry={{ snapshot: service.sources }}
+          fallback={recovery}
+        >
+          {(entry) => (
+            <entry.component
+              binding={binding}
+              snapshot={region.snapshot as SoloRegionProps["snapshot"]}
+              live={region.live}
+              {...(current ? { current } : {})}
+              {...presentation}
+              ui={destinationUi}
+            />
+          )}
+        </OwnedContribution>
+      ) : (
+        recovery
+      )}
+    </>
+  );
+  const hasActions = actions.length > 0 || !!ordinaryActions;
   return (
     <RegionDestinationContext.Provider
       value={{
@@ -418,84 +472,40 @@ function RegionFrame({
       }}
     >
       <div ref={root}>
-        <SidebarSection
-          sectionKey={sectionKey}
-          title={groupDisclosure?.title ?? region.title}
-          {...(hideHeading ? { hideTitle: true } : {})}
-          icon={source?.icon}
-          open={
-            groupDisclosure?.open ?? !sidebar.collapsed.includes(sectionKey)
-          }
-          onToggle={
-            groupDisclosure?.onToggle ??
-            ((open) => sidebar.toggle(sectionKey, open))
-          }
-          move={{
-            ...(!first ? { up: () => move(-1) } : {}),
-            ...(!last ? { down: () => move(1) } : {}),
-          }}
-          hideMoreActions={first && last}
-          persistentChevron={!!groupDisclosure}
-          headerActions={
-            <>
-              {actions
-                .filter((action) => action.icon !== "plus")
-                .map((action) => (
-                  <RegionAction key={action.id} action={action} run={run} />
-                ))}
-              {(actions.some((action) => action.icon === "plus") ||
-                ordinaryActions) && (
-                <RegionAction
-                  action={
-                    actions.find((action) => action.icon === "plus") ?? {
-                      id: "create",
-                      label: "Create",
-                      icon: "plus",
-                      onSelect() {},
-                      menu: () => [],
-                    }
-                  }
-                  run={run}
-                  extraItems={ordinaryActions}
-                  triggerRef={creationTrigger}
-                />
-              )}
-            </>
-          }
-          headerNotice={
-            actionError && (
-              <p className={styles.contributionFeedback} role="alert">
-                The action could not run.
-              </p>
-            )
-          }
-        >
-          {source &&
-          binding &&
-          presentation &&
-          region.snapshot?.status === "ready" &&
-          !region.reason ? (
-            <OwnedContribution
-              entry={source}
-              registry={{ snapshot: service.sources }}
-              fallback={recovery}
-            >
-              {(entry) => (
-                <entry.component
-                  binding={binding}
-                  snapshot={region.snapshot as SoloRegionProps["snapshot"]}
-                  live={region.live}
-                  {...(current ? { current } : {})}
-                  {...presentation}
-                  ui={destinationUi}
-                />
-              )}
-            </OwnedContribution>
-          ) : (
-            recovery
-          )}
-          {groupDisclosure ? ordinary : null}
-        </SidebarSection>
+        {hideHeading ? (
+          // The tab already names this region, so it has no title row. Its
+          // actions, when it has any, take a headingless row in the flow.
+          <>
+            {hasActions && <NavigationSectionHeading actions={headerActions} />}
+            {headerNotice}
+            {body}
+            {groupDisclosure ? ordinary : null}
+          </>
+        ) : (
+          <SidebarSection
+            sectionKey={sectionKey}
+            title={groupDisclosure?.title ?? region.title}
+            icon={source?.icon}
+            open={
+              groupDisclosure?.open ?? !sidebar.collapsed.includes(sectionKey)
+            }
+            onToggle={
+              groupDisclosure?.onToggle ??
+              ((open) => sidebar.toggle(sectionKey, open))
+            }
+            move={{
+              ...(!first ? { up: () => move(-1) } : {}),
+              ...(!last ? { down: () => move(1) } : {}),
+            }}
+            hideMoreActions={first && last}
+            persistentChevron={!!groupDisclosure}
+            headerActions={headerActions}
+            headerNotice={headerNotice}
+          >
+            {body}
+            {groupDisclosure ? ordinary : null}
+          </SidebarSection>
+        )}
         {groupDisclosure ? null : ordinary}
       </div>
     </RegionDestinationContext.Provider>

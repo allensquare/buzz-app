@@ -403,71 +403,192 @@ test("a presence badge preserves the sidebar avatar center and header insets", a
   }
 });
 
-test("Solo rows span the Team row width and workspace actions stay in their header", async ({
+// The sidebar is fluid, like auto layout: rows and headings fill their list,
+// a heading's label fills and its actions hug, and nothing floats over or
+// reserves space for anything else. Every tab, at both width limits, has to
+// hold that without per-tab adjustments.
+test("every sidebar tab fills its rows and keeps heading actions in their row at any width", async ({
   page,
   app,
 }) => {
   await page.goto(app.origin);
   await newChat(page);
   const soloRow = page.locator(`[data-solo-menu-id="${solo}"]`);
-  const teamRow = page
-    .locator("[data-channel-sidebar-row]")
-    .filter({ has: page.locator('[data-channel-id="beta"]') });
-  // Both rows paint their fill on ::before; its end inset is a calc expression.
-  const paintedEnd = (row) =>
-    row.evaluate(
-      (element) =>
-        element.getBoundingClientRect().right -
-        parseFloat(getComputedStyle(element, "::before").right),
-    );
-  await page.getByRole("tab", { name: "Team" }).click();
-  await expect(teamRow).toBeVisible();
-  const teamEnd = await paintedEnd(teamRow);
+  // A workspace gives Solo its own collapsible heading with actions.
   await page.getByRole("tab", { name: "Solo" }).click();
-  await expect(soloRow).toBeVisible();
-  await expect.poll(() => paintedEnd(soloRow)).toBe(teamEnd);
-  // Without its heading, Solo leaves creation to New beside the tabs rather
-  // than keeping a hidden control that still takes up a row.
-  await expect(
-    page.getByRole("button", { name: "New chat or workspace" }),
-  ).toHaveCount(0);
-  // Nothing takes a row between the untitled list's top inset and its content.
-  await expect
-    .poll(() =>
-      soloRow.evaluate((row) => {
-        const section = row.closest('[class*="untitledSection"]');
-        const content = section.lastElementChild;
-        return (
-          content.getBoundingClientRect().top -
-          section.getBoundingClientRect().top -
-          parseFloat(getComputedStyle(section).paddingBlockStart)
-        );
-      }),
-    )
-    .toBe(0);
-
   await soloRow.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Move to", exact: true }).hover();
   await page.getByRole("menuitem", { name: "New workspace" }).click();
   const dialog = page.getByRole("dialog");
-  await expect(page.locator('[role="menu"]')).toHaveCount(0);
   const field = dialog.getByRole("textbox", { name: "Workspace name" });
   await expect(field).toBeFocused();
   await field.fill("Work");
   await dialog.getByRole("button", { name: "Create and move" }).click();
   await expect(dialog).not.toBeVisible();
+  // Without its heading, Solo leaves creation to New beside the tabs.
+  await expect(
+    page.getByRole("button", { name: "New chat or workspace" }),
+  ).toHaveCount(0);
+
+  const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  const layout = () =>
+    sidebar.evaluate((aside) => {
+      const shown = (element) => element.getClientRects().length > 0;
+      const rows = [
+        ...aside.querySelectorAll(
+          '[data-channel-sidebar-row], [data-solo-menu-id]:not([data-solo-menu-id^="project-"])',
+        ),
+      ].filter(shown);
+      if (!rows.length) return { problems: ["no rows"] };
+      let scroller = rows[0];
+      while (
+        scroller &&
+        !/auto|scroll/.test(getComputedStyle(scroller).overflowY)
+      )
+        scroller = scroller.parentElement;
+      const bounds = scroller.getBoundingClientRect();
+      const problems = [];
+      if (scroller.scrollWidth > scroller.clientWidth)
+        problems.push(
+          `list scrolls sideways by ${scroller.scrollWidth - scroller.clientWidth}px`,
+        );
+      // Rows paint their fill on ::before, so its end is the visible edge.
+      const spread = (values) => Math.max(...values) - Math.min(...values);
+      const ends = rows
+        .map((row) => getComputedStyle(row, "::before").right)
+        .map((right, index) =>
+          right.endsWith("px")
+            ? rows[index].getBoundingClientRect().right - parseFloat(right)
+            : undefined,
+        )
+        .filter((end) => end !== undefined);
+      if (spread(ends) >= 1) problems.push(`rows end ${spread(ends)}px apart`);
+      // Headings share one leading text inset and one trailing action edge.
+      const textStarts = [];
+      const actionEnds = [];
+      for (const box of [
+        ...rows,
+        ...aside.querySelectorAll(".navigation-section-heading"),
+      ].filter(shown)) {
+        const rect = box.getBoundingClientRect();
+        if (rect.left < bounds.left - 0.5 || rect.right > bounds.right + 0.5)
+          problems.push(
+            `${box.textContent.trim().slice(0, 24)} leaves the list`,
+          );
+      }
+      const headings = [
+        ...aside.querySelectorAll(".navigation-section-heading"),
+      ].filter(shown);
+      for (const heading of headings) {
+        const frame = heading.getBoundingClientRect();
+        const name = heading.textContent.trim().slice(0, 24) || "(actions)";
+        for (const part of heading.querySelectorAll("*")) {
+          if (!shown(part)) continue;
+          const rect = part.getBoundingClientRect();
+          if (rect.width <= 1 && rect.height <= 1) continue;
+          if (/absolute|fixed/.test(getComputedStyle(part).position))
+            problems.push(`${name}: a part floats over the row`);
+          if (
+            rect.left < frame.left - 0.5 ||
+            rect.right > frame.right + 0.5 ||
+            rect.top < frame.top - 0.5 ||
+            rect.bottom > frame.bottom + 0.5
+          )
+            problems.push(`${name}: a part sits outside its heading`);
+        }
+        const label = heading.querySelector(
+          ":scope > .navigation-section-heading-label",
+        );
+        const trigger = label?.firstElementChild;
+        if (trigger && shown(trigger)) {
+          const style = getComputedStyle(trigger);
+          // Width kept for actions is a reservation, not an inset.
+          if (
+            parseFloat(style.paddingInlineEnd) >
+            parseFloat(style.paddingInlineStart)
+          )
+            problems.push(`${name}: reserves trailing space`);
+          textStarts.push(
+            trigger.getBoundingClientRect().left +
+              parseFloat(style.paddingInlineStart),
+          );
+        }
+        const actions = heading.querySelector(
+          ":scope > .navigation-section-heading-actions",
+        );
+        const buttons = actions ? [...actions.children].filter(shown) : [];
+        buttons.forEach((button, index) => {
+          const next = buttons[index + 1];
+          if (
+            next &&
+            button.getBoundingClientRect().right >
+              next.getBoundingClientRect().left + 0.5
+          )
+            problems.push(`${name}: actions overlap`);
+        });
+        if (buttons.length)
+          actionEnds.push(buttons.at(-1).getBoundingClientRect().right);
+      }
+      if (textStarts.length && spread(textStarts) >= 1)
+        problems.push(`heading text starts ${spread(textStarts)}px apart`);
+      if (actionEnds.length && spread(actionEnds) >= 1)
+        problems.push(`heading actions end ${spread(actionEnds)}px apart`);
+      // Where the tab's first row or heading starts: an empty band moves it.
+      const start = Math.min(
+        ...[...rows, ...headings].map((box) => box.getBoundingClientRect().top),
+      );
+      return {
+        end: ends[0],
+        problems,
+        rows: rows.length,
+        headings: headings.length,
+        start: Math.round(start - bounds.top + scroller.scrollTop),
+      };
+    });
+  const separator = page.getByRole("separator", {
+    name: "Resize sidebar",
+    exact: true,
+  });
+  for (const limit of ["Home", "End"]) {
+    await separator.focus();
+    await separator.press(limit);
+    const starts = {};
+    const ends = [];
+    for (const tab of ["All", "Team", "Solo"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      await page.mouse.move(0, 0);
+      const result = await layout();
+      expect(result.problems, `${tab} at ${limit}`).toEqual([]);
+      expect(result.rows, `${tab} at ${limit}`).toBeGreaterThan(0);
+      expect(result.headings, `${tab} at ${limit}`).toBeGreaterThan(0);
+      ends.push(result.end);
+      starts[tab] = result.start;
+    }
+    // Every tab's rows end on the same edge at a given width.
+    expect(Math.max(...ends) - Math.min(...ends), limit).toBeLessThan(1);
+    // Solo starts its list exactly where Team does.
+    expect(starts.Solo, limit).toBe(starts.Team);
+  }
+
+  // A workspace's actions reveal on hover, centered on its own heading.
   const nav = page.getByRole("navigation", { name: "Solo conversations" });
   const work = nav.getByRole("button", { name: "Work", exact: true });
   const create = nav.getByRole("button", { name: "New chat in Work" });
-  // A workspace's actions reveal on hover, centered on its own heading.
-  const shown = () =>
-    create.evaluate(
-      (element) => getComputedStyle(element.parentElement).opacity,
-    );
+  const options = nav.getByRole("button", { name: "Actions for Work" });
+  // What the eye sees: every ancestor's opacity multiplies.
+  const seen = (locator) =>
+    locator.evaluate((element) => {
+      let opacity = 1;
+      for (let node = element; node; node = node.parentElement)
+        opacity *= parseFloat(getComputedStyle(node).opacity);
+      return opacity;
+    });
   await page.mouse.move(0, 0);
-  await expect.poll(shown).toBe("0");
+  for (const action of [create, options])
+    await expect.poll(() => seen(action)).toBe(0);
   await work.hover();
-  await expect.poll(shown).toBe("1");
+  for (const action of [create, options])
+    await expect.poll(() => seen(action)).toBe(1);
   const center = (locator) =>
     locator.evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -476,5 +597,4 @@ test("Solo rows span the Team row width and workspace actions stay in their head
   await expect
     .poll(async () => Math.abs((await center(create)) - (await center(work))))
     .toBeLessThan(1);
-  await expect.poll(() => paintedEnd(soloRow)).toBe(teamEnd);
 });

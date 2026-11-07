@@ -497,8 +497,20 @@ framing and scrolling. `wrapSections` lets Settings groups wrap in one shared
 responsive layout when their host becomes narrow; do not reproduce that grid or
 its margin reset in the modal or feature stylesheet. Shared selector rules live globally in the design system,
 never nested inside feature CSS Modules via `@apply` (which renames their targets).
-Features keep unread cues, branded headers, collapsible groups, drag targets and
-composite row/scrollbar geometry; their existing layout rules remain in charge.
+Features keep unread cues, branded headers, drag targets and composite
+row/scrollbar geometry; their existing layout rules remain in charge.
+
+Every sidebar heading row, including collapsible channel groups and Solo
+workspaces, is a `NavigationSectionHeading`. It is auto layout: the label fills
+and truncates, actions hug the trailing edge, and the row fills its list. Never
+position heading actions absolutely or reserve trailing padding for them; a
+row that must work at every sidebar width cannot depend on a fixed gap. Use
+`disclosure` when the label is the feature's own collapse trigger, and
+`revealActions` or `data-navigation-reveal` for quiet parts such as the chevron.
+Revealed parts keep their width, show on hover, keyboard focus or an open
+heading menu, and always show on touch. When a host already names a list, as
+the sidebar's Team and Solo tabs do, omit its heading rather than hiding or
+overlaying it; any actions it still needs take a headingless heading row.
 Top-bar pills and picker options are not sidebar rows and keep their own recipes.
 
 Omit NavigationSection’s `label` for a headingless reference group: it keeps
