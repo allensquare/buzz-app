@@ -206,7 +206,9 @@ it("uses a chooser for competing plugins and revokes a stale plugin callback on 
   };
   const h = setup([first, entry("second", -10)]);
   h.select();
-  expect(await screen.findByText("Choose a preview")).toBeVisible();
+  expect(
+    await screen.findByRole("dialog", { name: "Selected text previews" }),
+  ).toBeVisible();
   await userEvent.click(screen.getByRole("button", { name: /^first$/ }));
   expect(await screen.findByText("First EX-42")).toBeVisible();
   const staleClose = previousClose;

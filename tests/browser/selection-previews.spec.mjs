@@ -110,7 +110,7 @@ test.describe("competing plugins", () => {
     );
     await selectText(page, row.locator("p").filter({ hasText: /^EX-42$/ }));
     const popup = page.getByRole("dialog");
-    await expect(popup.getByText("Choose a preview")).toBeVisible();
+    await expect(popup).toHaveAccessibleName("Selected text previews");
     await test.info().attach("Matching plugins", {
       body: await page.screenshot({
         path: test.info().outputPath("chooser.png"),
@@ -132,7 +132,7 @@ test.describe("competing plugins", () => {
         { theme, fontSize },
       );
       await selectText(page, row.locator("p").filter({ hasText: /^EX-42$/ }));
-      await expect(popup.getByText("Choose a preview")).toBeVisible();
+      await expect(popup).toHaveAccessibleName("Selected text previews");
       const bounds = await popup.evaluate((node) => ({
         left: node.getBoundingClientRect().left,
         right: node.getBoundingClientRect().right,
@@ -150,7 +150,7 @@ test.describe("competing plugins", () => {
       });
     }
     const choices = popup.getByRole("button");
-    await expect(choices.nth(1)).toContainText("Alternate ID");
+    await expect(choices.first()).toContainText("Alternate ID");
     await popup.getByRole("button", { name: /^Example ID$/ }).focus();
     await page.keyboard.press("Enter");
     await expect(popup.getByText("EX-42", { exact: true })).toBeVisible();

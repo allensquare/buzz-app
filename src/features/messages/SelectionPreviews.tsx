@@ -287,27 +287,29 @@ function SelectionHost({
         finalFocus={false}
         aria-label="Selected text previews"
       >
-        <div className="flex items-center gap-1 px-2 py-1">
-          {preview && matches.length > 1 && (
+        {preview && (
+          <div className="flex items-center gap-1 px-2 py-1">
+            {matches.length > 1 && (
+              <IconButton
+                icon={<CaretLeftIcon size={16} />}
+                aria-label="Other previews"
+                title="Other previews"
+                onPointerDown={(event) => event.preventDefault()}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setChosen(undefined)}
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <PopoverTitle>{preview.title}</PopoverTitle>
+            </div>
             <IconButton
-              icon={<CaretLeftIcon size={16} />}
-              aria-label="Other previews"
-              title="Other previews"
-              onPointerDown={(event) => event.preventDefault()}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => setChosen(undefined)}
+              icon={<XIcon size={16} />}
+              aria-label="Dismiss"
+              title="Dismiss"
+              onClick={close}
             />
-          )}
-          <div className="min-w-0 flex-1">
-            <PopoverTitle>{preview?.title ?? "Choose a preview"}</PopoverTitle>
           </div>
-          <IconButton
-            icon={<XIcon size={16} />}
-            aria-label="Dismiss"
-            title="Dismiss"
-            onClick={close}
-          />
-        </div>
+        )}
         {preview ? (
           <div className="px-2 pb-2">
             <ContributionBoundary
