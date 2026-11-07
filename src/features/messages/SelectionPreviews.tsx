@@ -326,6 +326,9 @@ function SelectionHost({
             <NavigationItem
               key={entry.key}
               title={entry.pluginId}
+              multiline={matches.some(
+                (other) => other !== entry && other.title === entry.title,
+              )}
               label={
                 <ChoiceRow
                   label={entry.title}
