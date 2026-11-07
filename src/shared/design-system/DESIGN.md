@@ -517,8 +517,9 @@ position heading actions absolutely or reserve trailing padding for them; a
 row that must work at every sidebar width cannot depend on a fixed gap. Use
 `disclosure` when the label is the feature's own collapse trigger, and
 `revealActions` or `data-navigation-reveal` for quiet parts such as the chevron.
-Revealed parts keep their width, show on hover, keyboard focus or an open
-heading menu, and always show on touch. When a host already names a list, as
+Revealed parts show on hover, keyboard focus or an open heading menu, and
+always show on touch. Hidden actions take no width, like a hidden auto layout
+child, so a long label keeps its words at large text sizes and narrow widths. When a host already names a list, as
 the sidebar's Team and Solo tabs do, omit its heading rather than hiding or
 overlaying it; any actions it still needs take a headingless heading row.
 Top-bar pills and picker options are not sidebar rows and keep their own recipes.

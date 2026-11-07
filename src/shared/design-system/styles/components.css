@@ -1617,10 +1617,17 @@
     outline-offset: -2px;
   }
 
-  /* Quiet parts keep their width while hidden, so revealing them never moves
-     the label. */
+  /* Quiet parts are transparent while hidden. Quiet actions also give up
+     their content width, like a hidden auto layout child, so the label takes
+     that space until they appear. They stay focusable: keyboard focus is one
+     of the states that reveals them. */
   .navigation-section-heading [data-navigation-reveal] {
     opacity: 0;
+  }
+
+  .navigation-section-heading-actions[data-navigation-reveal] {
+    max-width: 0;
+    overflow: hidden;
   }
 
   :is(
@@ -1633,11 +1640,15 @@
     )
     [data-navigation-reveal] {
     opacity: 1;
+    max-width: none;
+    overflow: visible;
   }
 
   @media (hover: none) {
     .navigation-section-heading [data-navigation-reveal] {
       opacity: 1;
+      max-width: none;
+      overflow: visible;
     }
   }
 

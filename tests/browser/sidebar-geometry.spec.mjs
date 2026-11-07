@@ -482,8 +482,26 @@ test("every sidebar tab fills its rows and keeps heading actions in their row at
       for (const heading of headings) {
         const frame = heading.getBoundingClientRect();
         const name = heading.textContent.trim().slice(0, 24) || "(actions)";
+        const actions = heading.querySelector(
+          ":scope > .navigation-section-heading-actions",
+        );
+        // Hidden quiet actions give their width to the label, like a hidden
+        // auto layout child; their clipped buttons are not laid out parts.
+        const collapsed =
+          actions?.hasAttribute("data-navigation-reveal") &&
+          getComputedStyle(actions).opacity === "0";
+        if (collapsed) {
+          const style = getComputedStyle(actions);
+          const content =
+            actions.clientWidth -
+            parseFloat(style.paddingInlineStart) -
+            parseFloat(style.paddingInlineEnd);
+          if (content > 0.5)
+            problems.push(`${name}: hidden actions take space`);
+        }
         for (const part of heading.querySelectorAll("*")) {
           if (!shown(part)) continue;
+          if (collapsed && actions.contains(part) && part !== actions) continue;
           const rect = part.getBoundingClientRect();
           if (rect.width <= 1 && rect.height <= 1) continue;
           if (/absolute|fixed/.test(getComputedStyle(part).position))
@@ -532,10 +550,8 @@ test("every sidebar tab fills its rows and keeps heading actions in their row at
             textStarts.push(range.getBoundingClientRect().left);
           }
         }
-        const actions = heading.querySelector(
-          ":scope > .navigation-section-heading-actions",
-        );
-        const buttons = actions ? [...actions.children].filter(shown) : [];
+        const buttons =
+          actions && !collapsed ? [...actions.children].filter(shown) : [];
         buttons.forEach((button, index) => {
           const next = buttons[index + 1];
           if (
@@ -616,4 +632,23 @@ test("every sidebar tab fills its rows and keeps heading actions in their row at
   await expect
     .poll(async () => Math.abs((await center(create)) - (await center(work))))
     .toBeLessThan(1);
+  // Revealed, the actions take their width back: after the title, in the row.
+  const placed = await options.evaluate((button) => {
+    const row = button
+      .closest(".navigation-section-heading")
+      .getBoundingClientRect();
+    const actions = button.parentElement.closest(
+      ".navigation-section-heading-actions",
+    );
+    const title = actions.previousElementSibling.getBoundingClientRect();
+    const slot = actions.getBoundingClientRect();
+    return (
+      title.right <= slot.left + 0.5 &&
+      [...actions.querySelectorAll("button")].every((part) => {
+        const rect = part.getBoundingClientRect();
+        return rect.left >= slot.left - 0.5 && rect.right <= row.right + 0.5;
+      })
+    );
+  });
+  expect(placed).toBe(true);
 });
