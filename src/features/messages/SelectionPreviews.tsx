@@ -210,9 +210,31 @@ function SelectionHost({
     };
     const key = (event: KeyboardEvent) => {
       if (
-        event.key === "Escape" &&
-        !behindActiveOverlay(owner, popup.current)
-      ) {
+        event.shiftKey ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.isComposing ||
+        event.keyCode === 229 ||
+        event.defaultPrevented ||
+        !popup.current ||
+        (
+          popup.current.closest("[data-base-ui-portal]") ?? popup.current
+        ).contains(event.target as Node) ||
+        behindActiveOverlay(owner, popup.current)
+      )
+        return;
+      if (event.key === "Tab") {
+        // There is no trigger button: native focus stays in the selected text.
+        // The host header/chooser always starts with an enabled button.
+        event.preventDefault();
+        event.stopPropagation();
+        popup.current.querySelector<HTMLButtonElement>("button")?.focus();
+      } else if (event.key === "Escape") {
+        // Automatic opening retains history focus. Consume Escape before its
+        // containing thread/tab can close; focused popup widgets own their keys.
+        event.preventDefault();
+        event.stopPropagation();
         const current = selectedMessageText(owner, currentRows.current);
         if (current) dismissed.current = current;
         setSelected(undefined);
@@ -227,7 +249,7 @@ function SelectionHost({
     document.addEventListener("pointerdown", press, true);
     document.addEventListener("pointerup", release, true);
     document.addEventListener("pointercancel", release, true);
-    document.addEventListener("keydown", key);
+    document.addEventListener("keydown", key, true);
     // Dismiss on scroll instead of retaining a preview over a virtualized-away row.
     const scroll = () => {
       const current = selectedMessageText(owner, currentRows.current);
@@ -244,7 +266,7 @@ function SelectionHost({
       document.removeEventListener("pointerdown", press, true);
       document.removeEventListener("pointerup", release, true);
       document.removeEventListener("pointercancel", release, true);
-      document.removeEventListener("keydown", key);
+      document.removeEventListener("keydown", key, true);
       owner.removeEventListener("scroll", scroll, true);
       window.removeEventListener("resize", scroll);
     };

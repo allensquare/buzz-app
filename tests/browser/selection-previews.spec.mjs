@@ -1,5 +1,5 @@
 import { test, expect } from "./fixture.mjs";
-import { open, settle } from "./timeline.mjs";
+import { clickRow, open, settle } from "./timeline.mjs";
 
 async function selectText(page, locator) {
   // Collapse an earlier native selection before dragging; Chromium otherwise
@@ -151,7 +151,18 @@ test.describe("competing plugins", () => {
     }
     const choices = popup.getByRole("button");
     await expect(choices.first()).toContainText("Alternate ID");
-    await popup.getByRole("button", { name: /^Example ID$/ }).focus();
+    await page.keyboard.press("Tab");
+    await expect(choices.first()).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      popup.getByRole("button", { name: /^Example ID$/ }),
+    ).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(choices.first()).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      popup.getByRole("button", { name: /^Example ID$/ }),
+    ).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(popup.getByText("EX-42", { exact: true })).toBeVisible();
     await popup.getByRole("button", { name: "Other previews" }).click();
@@ -159,5 +170,56 @@ test.describe("competing plugins", () => {
     await expect(popup.getByText("Alternate identifier: EX-42")).toBeVisible();
     await popup.getByRole("button", { name: "Dismiss" }).click();
     await expect(popup).toHaveCount(0);
+  });
+});
+
+test.describe("thread preview dismissal", () => {
+  test.use({
+    productionBroker: true,
+    readState: true,
+    threadUnread: true,
+    historyCounts: { alpha: 20, beta: 0 },
+  });
+  // The retained thread tab also owns Escape. With native focus still in its
+  // history, the preview must dismiss before the containing tab does.
+  test("Escape dismisses the preview before the containing thread", async ({
+    page,
+    app,
+  }) => {
+    await open(page, app);
+    const root = app.histories
+      .get("primary/alpha")
+      .find((row) => row.content === "Thread root 0");
+    if (!root) throw Error("Thread root unavailable");
+    const trigger = page
+      .locator(`[data-channel-timeline] [data-message-id="${root.id}"]`)
+      .getByRole("button", { name: /^View thread:/ });
+    await clickRow(page, trigger);
+    const panel = page.getByRole("complementary", {
+      name: "Thread",
+      exact: true,
+    });
+    const history = panel.getByRole("region", {
+      name: "Thread messages",
+      exact: true,
+    });
+    await expect(history).toBeVisible();
+    const reply = app.append("primary", "alpha", "EX-42", true, true, root.id);
+    const text = history
+      .locator(`[data-message-id="${reply.id}"] p`)
+      .filter({ hasText: /^EX-42$/ });
+    await expect(text).toBeVisible();
+    await history.focus();
+    await selectText(page, text);
+    const popup = page.getByRole("dialog");
+    await expect(popup).toBeVisible();
+    await expect(history).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(popup).toHaveCount(0);
+    await expect(history).toBeVisible();
+    await expect(history).toBeFocused();
+    expect(await page.evaluate(() => getSelection()?.toString())).toBe("EX-42");
+    await page.keyboard.press("Escape");
+    await expect(history).toHaveCount(0);
   });
 });
