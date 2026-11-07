@@ -34,3 +34,9 @@ Codex work-turn start/completion drives the working state. The realtime adapter
 also listens for response creation, output speech, completion and interruption;
 those event timings still need live voice acceptance. Chat typing presence is not
 used as a substitute for voice work state.
+
+For a microphone-driven mock, open `/tests/fixtures/huddles.html?chrome&audio&mock`,
+join and allow microphone access. Your voice drives listening; a pause triggers
+mock thinking and a visual response. Speak again to repeat or interrupt. Audio
+stays local and is not recorded or sent to an agent; the mock response is silent.
+Leave to stop microphone capture.

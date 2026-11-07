@@ -7,7 +7,7 @@ import {
 } from "../../src/features/relay/attachments";
 import { foldMessages } from "../../src/features/relay/fold";
 import { createRoot } from "react-dom/client";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useKeyboardFocusVisibility } from "../../src/shared/design-system/useKeyboardFocusVisibility";
 import { MessageBody } from "../../src/features/conversation/MessageBody";
 import { TargetOpenerProvider } from "../../src/features/conversation/opener";
@@ -567,6 +567,60 @@ const cardRegistry: ContributionReader<MessageRenderer> = {
   snapshot: () => cardRenderers,
   subscribe: () => () => {},
 };
+function MicrophoneMock() {
+  const [phase, setPhase] = useState("Speak to start the mock");
+  useEffect(() => {
+    let state = "idle";
+    let heard = 0;
+    let entered = 0;
+    const timer = setInterval(() => {
+      const call = huddles.snapshot();
+      if (!call.id || call.phase !== "connected") return;
+      const now = performance.now();
+      const speaking = !call.muted && (call.speakers?.[viewer] ?? 0) > 0;
+      huddles.voiceListening(call.id, peer, true);
+      if (speaking) {
+        heard = now;
+        state = "listening";
+        huddles.voiceThinking(call.id, peer, false);
+        setPhase("Listening to your microphone");
+      } else if (state === "listening" && now - heard > 900) {
+        state = "thinking";
+        entered = now;
+        huddles.voiceThinking(call.id, peer, true);
+        setPhase("Mock thinking");
+      } else if (state === "thinking" && now - entered > 1600) {
+        state = "responding";
+        entered = now;
+        huddles.voiceThinking(call.id, peer, false);
+        setPhase("Mock response — animation only, no generated audio");
+      }
+      if (state === "responding") {
+        if (now - entered < 3200) {
+          window.huddleFixture.speak(
+            peer,
+            0.035 + Math.abs(Math.sin((now - entered) / 180)) * 0.08,
+          );
+        } else {
+          state = "idle";
+          setPhase("Speak again to repeat");
+        }
+      }
+    }, 100);
+    return () => {
+      clearInterval(timer);
+      const call = huddles.snapshot();
+      if (call.id) huddles.voiceThinking(call.id, peer, false);
+    };
+  }, []);
+  return (
+    <p className="text-body text-secondary" role="status">
+      {phase}. Audio stays local; nothing is recorded or sent to an agent. Leave
+      the huddle to stop the microphone.
+    </p>
+  );
+}
+
 function Fixture() {
   useKeyboardFocusVisibility();
   useSyncExternalStore(
@@ -750,6 +804,12 @@ function Fixture() {
         <Button variant="ghost" onClick={() => setDm((value) => !value)}>
           Switch conversation
         </Button>
+        {realAudio &&
+          new URLSearchParams(location.search).has("mock") &&
+          call.phase === "connected" && <MicrophoneMock />}
+        {!realAudio && (
+          <a href="?chrome&audio&mock">Try the microphone-driven mock</a>
+        )}
         {call.phase === "connected" && (
           <Button
             variant="ghost"
