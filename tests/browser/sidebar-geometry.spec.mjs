@@ -511,10 +511,26 @@ test("every sidebar tab fills its rows and keeps heading actions in their row at
             parseFloat(style.paddingInlineStart)
           )
             problems.push(`${name}: reserves trailing space`);
-          textStarts.push(
-            trigger.getBoundingClientRect().left +
-              parseFloat(style.paddingInlineStart),
+          // Where the title's first glyph paints, whatever wraps it.
+          const walker = document.createTreeWalker(
+            trigger,
+            NodeFilter.SHOW_TEXT,
+            {
+              // Skip blank and visually hidden text.
+              acceptNode: (node) =>
+                node.data.trim() &&
+                node.parentElement.getBoundingClientRect().width > 1
+                  ? NodeFilter.FILTER_ACCEPT
+                  : NodeFilter.FILTER_SKIP,
+            },
           );
+          const text = walker.nextNode();
+          if (text) {
+            const range = document.createRange();
+            range.setStart(text, text.data.search(/\S/));
+            range.setEnd(text, text.data.search(/\S/) + 1);
+            textStarts.push(range.getBoundingClientRect().left);
+          }
         }
         const actions = heading.querySelector(
           ":scope > .navigation-section-heading-actions",
