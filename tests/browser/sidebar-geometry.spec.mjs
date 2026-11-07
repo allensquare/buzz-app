@@ -499,7 +499,10 @@ test("every sidebar tab fills its rows and keeps heading actions in their row at
         const label = heading.querySelector(
           ":scope > .navigation-section-heading-label",
         );
-        const trigger = label?.firstElementChild;
+        // The trigger, inside its <details> when a section collapses natively.
+        const trigger = label?.querySelector(
+          ":scope > button, :scope > details > summary",
+        );
         if (trigger && shown(trigger)) {
           const style = getComputedStyle(trigger);
           // Width kept for actions is a reservation, not an inset.

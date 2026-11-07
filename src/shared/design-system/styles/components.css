@@ -1573,9 +1573,14 @@
     min-width: 0;
   }
 
+  /* Only the trigger itself, never a control nested inside it. */
   .navigation-section-heading[data-disclosure]
     .navigation-section-heading-label
-    :where(summary, button) {
+    > button,
+  .navigation-section-heading[data-disclosure]
+    .navigation-section-heading-label
+    > details
+    > summary {
     @apply text-label-sm;
     display: flex;
     align-items: center;
@@ -1603,7 +1608,11 @@
 
   .navigation-section-heading[data-disclosure]
     .navigation-section-heading-label
-    :where(summary, button):focus-visible {
+    > button:focus-visible,
+  .navigation-section-heading[data-disclosure]
+    .navigation-section-heading-label
+    > details
+    > summary:focus-visible {
     outline: 2px solid var(--border-focus);
     outline-offset: -2px;
   }

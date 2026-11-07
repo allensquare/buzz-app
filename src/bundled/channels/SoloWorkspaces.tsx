@@ -1,3 +1,4 @@
+import { FadingLabel } from "./FadingLabel";
 import { prepareSoloMove } from "../../features/channel-navigation/solo-navigation";
 import { useChatConversions } from "../../features/solo/conversion";
 import { ConvertToChannel } from "../../features/solo/ConvertToChannel";
@@ -542,9 +543,9 @@ export function SoloWorkspaces({
                     }
                     onClick={(event) => setAnimate(event.detail > 0)}
                   >
-                    <span className={channelStyles.sectionTitle}>
+                    <FadingLabel className={channelStyles.sectionTitle}>
                       {project.name}
-                    </span>
+                    </FadingLabel>
                     <span
                       className={channelStyles.sectionChevron}
                       aria-hidden="true"
