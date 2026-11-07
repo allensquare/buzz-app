@@ -1113,20 +1113,10 @@ details:not([open]) > summary .sectionChevron {
   background: var(--text-row-selected);
 }
 
-/* Feather only message history; the header and composer stay sharp. */
+/* Feather only message history, with the shared always-on scroll fade; the
+   header and composer stay sharp. */
 .conversation [data-message-scroller] {
-  mask-image: linear-gradient(
-    to bottom,
-    transparent,
-    black var(--space-4),
-    black calc(100% - var(--space-4)),
-    transparent
-  );
-}
-@media (forced-colors: active), (prefers-reduced-transparency: reduce) {
-  .conversation [data-message-scroller] {
-    mask-image: none;
-  }
+  mask-image: var(--scroll-fade-always);
 }
 
 .conversationBody {

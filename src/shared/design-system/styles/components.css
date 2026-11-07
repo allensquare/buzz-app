@@ -1039,6 +1039,50 @@
     -webkit-user-select: none;
     user-select: none;
   }
+  /* Scroll fade: a scroller feathers its edges into the surface instead of
+     cutting content at a hard line. `always` feathers both edges, as message
+     history does; `scrolled` feathers only an edge with content past it, so a
+     list at rest keeps its first row crisp. Set `data-scroll-fade` on the
+     scroller; `scrolled` also needs `useScrollEdges("block")` on it. A host
+     that cannot mark its scroller applies `--scroll-fade-always` itself. */
+  :root {
+    --scroll-fade: var(--space-4);
+    --scroll-fade-always: linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--scroll-fade),
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+    --scroll-fade-start: linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--scroll-fade)
+    );
+    --scroll-fade-end: linear-gradient(
+      to top,
+      transparent,
+      #000 var(--scroll-fade)
+    );
+  }
+  @media (forced-colors: active), (prefers-reduced-transparency: reduce) {
+    :root {
+      --scroll-fade-always: none;
+      --scroll-fade-start: none;
+      --scroll-fade-end: none;
+    }
+  }
+  [data-scroll-fade="always"],
+  [data-scroll-fade="scrolled"][data-overflow-start][data-overflow-end] {
+    mask-image: var(--scroll-fade-always);
+  }
+  [data-scroll-fade="scrolled"][data-overflow-start]:not([data-overflow-end]) {
+    mask-image: var(--scroll-fade-start);
+  }
+  [data-scroll-fade="scrolled"][data-overflow-end]:not([data-overflow-start]) {
+    mask-image: var(--scroll-fade-end);
+  }
+
   /* A scrolling strip fades out on each edge that has tabs past them, so a cut
      tab reads as "more this way" rather than as clipped. Only the panel and
      navigation lists scroll; the others never hide a tab to fade. */

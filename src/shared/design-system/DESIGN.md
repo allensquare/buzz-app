@@ -500,6 +500,16 @@ never nested inside feature CSS Modules via `@apply` (which renames their target
 Features keep unread cues, branded headers, drag targets and composite
 row/scrollbar geometry; their existing layout rules remain in charge.
 
+A scrolling list under sticky chrome with no material behind it, such as the
+sidebar below its tabs or message history below its header, feathers its edges
+with the scroll fade instead of cutting rows at a hard line. Set
+`data-scroll-fade` on the scroller. `always` feathers both edges, as message
+history does. `scrolled` feathers only an edge with content past it, marked by
+`useScrollEdges("block")`, so a list at rest keeps its first row crisp; the
+sidebar uses it. A host whose scroller cannot carry the attribute applies
+`--scroll-fade-always`. Reduced transparency and forced colors remove the fade.
+Tab strips keep their own wider horizontal fade.
+
 Every sidebar heading row, including collapsible channel groups and Solo
 workspaces, is a `NavigationSectionHeading`. It is auto layout: the label fills
 and truncates, actions hug the trailing edge, and the row fills its list. Never
