@@ -46,3 +46,48 @@ it("shows and clears the connected call's voice error alongside window errors", 
   );
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
+
+it("holds the listening size through silence until the agent responds", () => {
+  const agent = {
+    key: "agent",
+    name: "Agent",
+    picture: null,
+    own: false,
+    listening: true,
+    attending: true,
+    level: 0,
+  };
+  const view: HuddleView = {
+    id: "call",
+    title: "Huddle",
+    phase: "connected",
+    muted: false,
+    level: 0,
+    dark: false,
+    participants: [agent],
+  };
+  const mounted = render(<HuddleWindowView view={view} act={vi.fn()} />);
+  const scale = () =>
+    mounted.container
+      .querySelector<HTMLElement>('[class*="bubbleArtwork"]')
+      ?.style.getPropertyValue("--voice-scale");
+  expect(scale()).toBe("0.8");
+  const update = (changes: Partial<typeof agent> & { thinking?: boolean }) =>
+    mounted.rerender(
+      <HuddleWindowView
+        view={{
+          ...view,
+          participants: [{ ...agent, attending: false, ...changes }],
+        }}
+        act={vi.fn()}
+      />,
+    );
+  update({});
+  expect(scale()).toBe("0.8");
+  update({ thinking: true });
+  expect(scale()).toBe("0.8");
+  update({ level: 0.3 });
+  expect(Number(scale())).toBeGreaterThan(1);
+  update({});
+  expect(scale()).toBe("1");
+});

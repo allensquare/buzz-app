@@ -1,6 +1,7 @@
 import { HuddleAvatarToss } from "./HuddleAvatarToss";
 import { HuddleAvatarMotion } from "./HuddleAvatarMotion";
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -370,7 +371,13 @@ function Bubble({
 }) {
   const level = muted ? 0 : Math.max(0, Math.min(1, person.level));
   const thinking = !!person.thinking && level === 0;
-  const quiet = (thinking || person.attending) && level === 0;
+  const [awaitingResponse, setAwaitingResponse] = useState(false);
+  useEffect(() => {
+    if (level > 0 || !person.listening) setAwaitingResponse(false);
+    else if (person.attending) setAwaitingResponse(true);
+  }, [level, person.listening, person.attending]);
+  const quiet =
+    (thinking || person.attending || awaitingResponse) && level === 0;
   const listeningScale =
     0.8 * (1 - (Math.min(0.6, Math.max(0, listeningLevel)) / 0.6) * 0.05);
   const label = `${person.name}${person.own ? (muted ? " (you, muted)" : " (you)") : ""}${level > 0 ? ", speaking" : ""}${thinking ? ", thinking" : ""}${person.listening ? ", listening to you" : ""}`;
