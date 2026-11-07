@@ -5,6 +5,6 @@ export function apply(ctx) {
     title: "Example ID",
     matches: ({ text }) => /^EX-\d+$/.test(text),
     component: ({ text }) =>
-      ctx.react.createElement("p", null, `Selected identifier: ${text}`),
+      ctx.react.createElement("code", { className: "text-body-sm" }, text),
   });
 }

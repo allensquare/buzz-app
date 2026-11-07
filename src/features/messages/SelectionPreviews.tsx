@@ -31,7 +31,14 @@ import {
   PopoverPopup,
   PopoverTitle,
 } from "../../shared/design-system/ui/Popover";
-import { Button } from "../../shared/design-system/ui/Button";
+import { IconButton } from "../../shared/design-system/ui/IconButton";
+import { NavigationItem } from "../../shared/design-system/ui/NavigationItem";
+import { ChoiceRow } from "../../shared/design-system/ui/ChoiceRow";
+import {
+  XIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+} from "../../shared/design-system/icons";
 import { messageViewKey } from "./view-key";
 
 type Props = {
@@ -267,6 +274,8 @@ function SelectionHost({
     >
       <PopoverPopup
         ref={popup}
+        size="compact"
+        padding="list"
         onFocusCapture={() => {
           usedPopup.current = true;
         }}
@@ -278,9 +287,29 @@ function SelectionHost({
         finalFocus={false}
         aria-label="Selected text previews"
       >
-        <div className="flex flex-col gap-2">
-          <PopoverTitle>{preview?.title ?? "Choose a preview"}</PopoverTitle>
-          {preview ? (
+        <div className="flex items-center gap-1 px-2 py-1">
+          {preview && matches.length > 1 && (
+            <IconButton
+              icon={<CaretLeftIcon size={16} />}
+              aria-label="Other previews"
+              title="Other previews"
+              onPointerDown={(event) => event.preventDefault()}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setChosen(undefined)}
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <PopoverTitle>{preview?.title ?? "Choose a preview"}</PopoverTitle>
+          </div>
+          <IconButton
+            icon={<XIcon size={16} />}
+            aria-label="Dismiss"
+            title="Dismiss"
+            onClick={close}
+          />
+        </div>
+        {preview ? (
+          <div className="px-2 pb-2">
             <ContributionBoundary
               key={`${contributionKey(preview)}:${contributionKey(selected)}`}
               fallback={<p className="text-body-sm">Preview unavailable.</p>}
@@ -291,38 +320,31 @@ function SelectionHost({
                 registry={registry}
               />
             </ContributionBoundary>
-          ) : (
-            matches.map((entry) => (
-              <Button
-                key={entry.key}
-                variant="ghost"
-                size="sm"
-                onPointerDown={(event) => event.preventDefault()}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => setChosen({ selection: selected, entry })}
-              >
-                {entry.title}{" "}
-                <span className="text-body-sm text-muted">
-                  {entry.pluginId}
-                </span>
-              </Button>
-            ))
-          )}
-          {preview && matches.length > 1 && (
-            <Button
-              size="sm"
-              variant="ghost"
+          </div>
+        ) : (
+          matches.map((entry) => (
+            <NavigationItem
+              key={entry.key}
+              title={entry.pluginId}
+              label={
+                <ChoiceRow
+                  label={entry.title}
+                  description={
+                    matches.some(
+                      (other) => other !== entry && other.title === entry.title,
+                    )
+                      ? entry.pluginId
+                      : undefined
+                  }
+                />
+              }
+              trailing={<CaretRightIcon size={16} />}
               onPointerDown={(event) => event.preventDefault()}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => setChosen(undefined)}
-            >
-              Other previews
-            </Button>
-          )}
-          <Button size="sm" variant="ghost" onClick={close}>
-            Dismiss
-          </Button>
-        </div>
+              onClick={() => setChosen({ selection: selected, entry })}
+            />
+          ))
+        )}
       </PopoverPopup>
     </PopoverRoot>
   );

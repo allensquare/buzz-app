@@ -2825,8 +2825,9 @@ one message body. It applies in channel timelines, Solo chats and thread views.
 No matching contribution means no popup. One match opens its preview directly;
 several matches open a chooser. Lower `order` sorts first (default zero), with
 contribution keys breaking ties. Ordering never hides another matching preview.
-The chooser shows each title and plugin ID. A selected preview can return to the
-chooser through **Other previews**.
+The compact chooser shows each title; plugin IDs distinguish duplicate titles
+and remain available as hints. A selected preview can return to the chooser
+through **Other previews**.
 
 `matches({ text, message })` must be synchronous and local. It receives visible
 selected text, bounded to 4096 UTF-16 units, and its message. A throwing matcher is

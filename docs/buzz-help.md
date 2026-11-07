@@ -238,7 +238,7 @@ revokes all of them, and a pairing unused for 30 days expires.
 - Enabled plugins can recognize text you select within a message and show a
   preview beside it. Ordinary text with no match shows nothing. If several
   previews match, choose one. Copy works while the preview is open. Escape or
-  **Dismiss** closes it; **Other previews** returns to the chooser.
+  the close button closes it; the back arrow returns to the chooser.
 
 - Only explicit additions by another member and removals appear as centered
   channel notices; self-joins and voluntary leaves are hidden.

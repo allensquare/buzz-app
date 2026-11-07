@@ -46,7 +46,7 @@ test("selected message text opens a preview without stealing focus or copy", asy
   await expect(text).toBeVisible();
   await selectText(page, text);
   const popup = page.getByRole("dialog");
-  await expect(popup.getByText("Selected identifier: EX-42")).toBeVisible();
+  await expect(popup.getByText("EX-42", { exact: true })).toBeVisible();
   await test.info().attach("Selection preview", {
     body: await page.screenshot({
       path: test.info().outputPath("preview.png"),
@@ -150,16 +150,12 @@ test.describe("competing plugins", () => {
       });
     }
     const choices = popup.getByRole("button");
-    await expect(choices.first()).toContainText("Alternate ID");
-    await popup
-      .getByRole("button", { name: /Example ID example.selection-preview/ })
-      .focus();
+    await expect(choices.nth(1)).toContainText("Alternate ID");
+    await popup.getByRole("button", { name: /^Example ID$/ }).focus();
     await page.keyboard.press("Enter");
-    await expect(popup.getByText("Selected identifier: EX-42")).toBeVisible();
+    await expect(popup.getByText("EX-42", { exact: true })).toBeVisible();
     await popup.getByRole("button", { name: "Other previews" }).click();
-    await popup
-      .getByRole("button", { name: /Alternate ID fixture.selection-alternate/ })
-      .click();
+    await popup.getByRole("button", { name: /^Alternate ID$/ }).click();
     await expect(popup.getByText("Alternate identifier: EX-42")).toBeVisible();
     await popup.getByRole("button", { name: "Dismiss" }).click();
     await expect(popup).toHaveCount(0);
