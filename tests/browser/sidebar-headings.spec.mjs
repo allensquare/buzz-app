@@ -46,6 +46,9 @@ test("sidebar headings keep readable space and compact disclosure targets at enl
       if (width === 260) await resize.dblclick();
       else await resize.press(width === 220 ? "Home" : "End");
       await expect(resize).toHaveAttribute("aria-valuenow", String(width));
+      // Measure at rest: the double-click leaves the pointer where a heading
+      // can land, and hovering reveals its actions, which take their width.
+      await page.mouse.move(0, 0);
       for (const summary of summaries) {
         await summary.scrollIntoViewIfNeeded();
         await expect
