@@ -378,8 +378,8 @@ function Bubble({
   }, [level, person.listening, person.attending]);
   const quiet =
     (thinking || person.attending || awaitingResponse) && level === 0;
-  const listeningScale =
-    0.8 * (1 - (Math.min(0.6, Math.max(0, listeningLevel)) / 0.6) * 0.05);
+  const motionLevel =
+    quiet && !thinking ? Math.max(0, Math.min(1, listeningLevel)) : level;
   const label = `${person.name}${person.own ? (muted ? " (you, muted)" : " (you)") : ""}${level > 0 ? ", speaking" : ""}${thinking ? ", thinking" : ""}${person.listening ? ", listening to you" : ""}`;
   return (
     <HuddleAvatarToss stage={stage}>
@@ -388,19 +388,20 @@ function Bubble({
         data-thinking={thinking || undefined}
         style={
           {
-            "--voice-scale": quiet
-              ? thinking
-                ? 0.8
-                : listeningScale
-              : 1 + Math.min(level, 0.6) * 0.06,
+            "--voice-scale":
+              (quiet ? 0.8 : 1) * (1 + Math.min(motionLevel, 0.6) * 0.06),
           } as CSSProperties
         }
       >
-        <SpeakingHalo level={level} person={person} />
+        <SpeakingHalo level={motionLevel} person={person} />
         {thinking && (
           <span className={styles.thinkingRing} aria-hidden="true" />
         )}
-        <HuddleAvatarMotion participant={person.key} playful level={level}>
+        <HuddleAvatarMotion
+          participant={person.key}
+          playful
+          level={motionLevel}
+        >
           <Avatar
             size="fill"
             src={person.picture}
