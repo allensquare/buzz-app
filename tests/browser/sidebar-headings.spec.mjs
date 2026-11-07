@@ -116,7 +116,9 @@ test("sidebar headings keep readable space and compact disclosure targets at enl
   await resize.press("Home");
   await page.setViewportSize({ width: 1440, height: 1200 });
   const channels = summaries[0];
-  // The trailing edge outside the action buttons still toggles the section.
+  // The trailing edge before the revealed action buttons still toggles the
+  // section. Hover first: revealed actions take their width from the trigger.
+  await channels.hover();
   const target = await channels.boundingBox();
   await channels.click({
     position: { x: target.width - 2, y: target.height / 2 },
