@@ -393,7 +393,7 @@ function Bubble({
           } as CSSProperties
         }
       >
-        <SpeakingHalo level={motionLevel} person={person} />
+        <SpeakingHalo level={level} person={person} />
         {thinking && (
           <span className={styles.thinkingRing} aria-hidden="true" />
         )}
