@@ -54,10 +54,15 @@ test("sidebar headings keep readable space and compact disclosure targets at enl
               const title = element.firstElementChild.lastElementChild;
               const label = element.firstElementChild.getBoundingClientRect();
               const chevron = element.lastElementChild.getBoundingClientRect();
-              const header = element.parentElement.parentElement;
+              const header = element.closest(".navigation-section-heading");
               const frame = header.getBoundingClientRect();
+              const slot = header
+                .querySelector(".navigation-section-heading-label")
+                .getBoundingClientRect();
               const disclosure = element.getBoundingClientRect();
-              const actions = header.lastElementChild.getBoundingClientRect();
+              const actions = header
+                .querySelector(".navigation-section-heading-actions")
+                .getBoundingClientRect();
               const root = Number.parseFloat(
                 getComputedStyle(document.documentElement).fontSize,
               );
@@ -73,14 +78,16 @@ test("sidebar headings keep readable space and compact disclosure targets at enl
                   Math.abs(frame.height - disclosure.height) < 1 &&
                   frame.height <= 2.5 * root,
                 adjacent: Math.abs(chevron.left - label.right - gap) < 1,
+                // The trigger fills the label slot; actions follow it.
                 fullTarget:
-                  disclosure.left === frame.left &&
-                  disclosure.right === frame.right,
+                  disclosure.left === slot.left &&
+                  disclosure.right === slot.right &&
+                  slot.right <= actions.left + 0.5,
                 actionsContained:
                   actions.left >= frame.left &&
                   actions.right <= frame.right + 1 &&
-                  // translateY(-50%) may land half a layout subpixel above
-                  // the frame at fractional sizes; check its intended center.
+                  // Fractional sizes may land half a layout subpixel off;
+                  // check the intended center.
                   Math.abs(
                     actions.top +
                       actions.height / 2 -
