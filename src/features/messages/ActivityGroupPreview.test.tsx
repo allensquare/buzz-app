@@ -468,7 +468,7 @@ it.each([
   const group = activityPresentation(
     [step, failure],
     undefined,
-    new Set(["agent"]),
+    new Set(["agent", "outside"]),
     "request",
   ).groups[0];
   expect(group?.ids).toEqual([step.id]);
