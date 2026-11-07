@@ -594,6 +594,14 @@ html[data-keyboard-input] :is(.selfBubble, .cloudBubble, .bubbleName) {
   background: var(--surface-panel);
   color: var(--text-secondary);
 }
+@keyframes huddle-thinking-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 @keyframes huddle-thinking {
   to {
     transform: rotate(360deg);
@@ -601,6 +609,8 @@ html[data-keyboard-input] :is(.selfBubble, .cloudBubble, .bubbleName) {
 }
 @media (prefers-reduced-motion: no-preference) {
   .thinkingRing {
-    animation: huddle-thinking 1.4s linear infinite;
+    animation:
+      huddle-thinking 1.4s linear infinite,
+      huddle-thinking-enter var(--duration-state) var(--easing-enter) both;
   }
 }
