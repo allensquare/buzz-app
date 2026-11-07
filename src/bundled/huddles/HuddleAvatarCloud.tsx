@@ -324,12 +324,7 @@ export function HuddleAvatarCloud({
               data-name-active={activeKey === person.key}
               {...nameInteraction(person.key)}
             >
-              <Bubble
-                person={person}
-                muted={false}
-                stage={stage}
-                listeningLevel={muted ? 0 : (self?.level ?? 0)}
-              />
+              <Bubble person={person} muted={false} stage={stage} />
             </div>
           ))}
           {hidden > 0 && (
@@ -362,11 +357,9 @@ function Bubble({
   person,
   muted,
   stage,
-  listeningLevel = 0,
 }: {
   person: Person;
   muted: boolean;
-  listeningLevel?: number;
   stage: RefObject<HTMLElement | null>;
 }) {
   const level = muted ? 0 : Math.max(0, Math.min(1, person.level));
@@ -378,8 +371,6 @@ function Bubble({
   }, [level, person.listening, person.attending]);
   const quiet =
     (thinking || person.attending || awaitingResponse) && level === 0;
-  const motionLevel =
-    quiet && !thinking ? Math.max(0, Math.min(1, listeningLevel)) : level;
   const label = `${person.name}${person.own ? (muted ? " (you, muted)" : " (you)") : ""}${level > 0 ? ", speaking" : ""}${thinking ? ", thinking" : ""}${person.listening ? ", listening to you" : ""}`;
   return (
     <HuddleAvatarToss stage={stage}>
@@ -388,8 +379,7 @@ function Bubble({
         data-thinking={thinking || undefined}
         style={
           {
-            "--voice-scale":
-              (quiet ? 0.8 : 1) * (1 + Math.min(motionLevel, 0.6) * 0.06),
+            "--voice-scale": quiet ? 0.8 : 1 + Math.min(level, 0.6) * 0.06,
           } as CSSProperties
         }
       >
@@ -397,11 +387,7 @@ function Bubble({
         {thinking && (
           <span className={styles.thinkingRing} aria-hidden="true" />
         )}
-        <HuddleAvatarMotion
-          participant={person.key}
-          playful
-          level={motionLevel}
-        >
+        <HuddleAvatarMotion participant={person.key} playful level={level}>
           <Avatar
             size="fill"
             src={person.picture}
