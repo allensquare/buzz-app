@@ -321,6 +321,8 @@ test("section labels fade on overflow and recover when widened", async ({
 
   // Enlarging a narrow saved section must preserve useful text space without
   // changing this same single-line fading contract.
+  // At rest: revealed actions take their width back from the label.
+  await page.mouse.move(0, 0);
   await page.evaluate(() => {
     localStorage.setItem("buzz-font-scale.v1", "2");
     window.dispatchEvent(
